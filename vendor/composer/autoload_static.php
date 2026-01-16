@@ -17,12 +17,12 @@ class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
         'f598d06aa772fa33d905e87be6398fb1' => __DIR__ . '/..' . '/symfony/polyfill-intl-idn/bootstrap.php',
         '667aeda72477189d0494fecd327c3641' => __DIR__ . '/..' . '/symfony/var-dumper/Resources/functions/dump.php',
         'a4a119a56e50fbb293281d9a48007e0e' => __DIR__ . '/..' . '/symfony/polyfill-php80/bootstrap.php',
-        '35a6ad97d21e794e7e22a17d806652e4' => __DIR__ . '/..' . '/nunomaduro/termwind/src/Functions.php',
         '7b11c4dc42b3b3023073cb14e519683c' => __DIR__ . '/..' . '/ralouphie/getallheaders/src/getallheaders.php',
+        '35a6ad97d21e794e7e22a17d806652e4' => __DIR__ . '/..' . '/nunomaduro/termwind/src/Functions.php',
+        '37a3dc5111fe8f707ab4c132ef1dbc62' => __DIR__ . '/..' . '/guzzlehttp/guzzle/src/functions_include.php',
         '2203a247e6fda86070a5e4e07aed533a' => __DIR__ . '/..' . '/symfony/clock/Resources/now.php',
         '09f6b20656683369174dd6fa83b7e5fb' => __DIR__ . '/..' . '/symfony/polyfill-uuid/bootstrap.php',
         'a1105708a18b76903365ca1c4aa61b02' => __DIR__ . '/..' . '/symfony/translation/Resources/functions.php',
-        '37a3dc5111fe8f707ab4c132ef1dbc62' => __DIR__ . '/..' . '/guzzlehttp/guzzle/src/functions_include.php',
         '47e1160838b5e5a10346ac4084b58c23' => __DIR__ . '/..' . '/laravel/prompts/src/helpers.php',
         '6124b4c8570aa390c21fafd04a26c69f' => __DIR__ . '/..' . '/myclabs/deep-copy/src/DeepCopy/deep_copy.php',
         '801c31d8ed748cfa537fa45402288c95' => __DIR__ . '/..' . '/psy/psysh/src/functions.php',
@@ -136,6 +136,10 @@ class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
             'Laravel\\Sail\\' => 13,
             'Laravel\\Prompts\\' => 16,
             'Laravel\\Pail\\' => 13,
+        ),
+        'J' => 
+        array (
+            'JnJairo\\Laravel\\Ngrok\\' => 22,
         ),
         'I' => 
         array (
@@ -452,6 +456,10 @@ class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
         array (
             0 => __DIR__ . '/..' . '/laravel/pail/src',
         ),
+        'JnJairo\\Laravel\\Ngrok\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/jn-jairo/laravel-ngrok/src',
+        ),
         'Illuminate\\Support\\' => 
         array (
             0 => __DIR__ . '/..' . '/laravel/framework/src/Illuminate/Macroable',
@@ -548,21 +556,30 @@ class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
     );
 
     public static $classMap = array (
+        'App\\Http\\Controllers\\Api\\Admin\\AuthController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/Admin/AuthController.php',
+        'App\\Http\\Controllers\\Api\\Admin\\BookController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/Admin/BookController.php',
+        'App\\Http\\Controllers\\Api\\Admin\\PromoController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/Admin/PromoController.php',
+        'App\\Http\\Controllers\\Api\\Admin\\ReviewController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/Admin/ReviewController.php',
+        'App\\Http\\Controllers\\Api\\Admin\\TransaksiController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/Admin/TransaksiController.php',
+        'App\\Http\\Controllers\\Api\\BookPublicController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/BookPublicController.php',
         'App\\Http\\Controllers\\Api\\CartController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/CartController.php',
         'App\\Http\\Controllers\\Api\\CheckoutController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/CheckoutController.php',
-        'App\\Http\\Controllers\\Api\\MidtransController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/MidtransController.php',
+        'App\\Http\\Controllers\\Api\\EmailController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/EmailController.php',
+        'App\\Http\\Controllers\\Api\\PromoPublicController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/PromoPublicController.php',
+        'App\\Http\\Controllers\\Api\\RajaongkirController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/RajaongkirController.php',
         'App\\Http\\Controllers\\Api\\TransaksiController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/TransaksiController.php',
+        'App\\Http\\Controllers\\Api\\WishlistController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/WishlistController.php',
         'App\\Http\\Controllers\\AuthController' => __DIR__ . '/../..' . '/app/Http/Controllers/AuthController.php',
         'App\\Http\\Controllers\\Controller' => __DIR__ . '/../..' . '/app/Http/Controllers/Controller.php',
         'App\\Http\\Controllers\\PasswordController' => __DIR__ . '/../..' . '/app/Http/Controllers/PasswordController.php',
-        'App\\Http\\Middleware\\PreventBackHistory' => __DIR__ . '/../..' . '/app/Http/Middleware/PreventBackHistory.php',
-        'App\\Http\\Requests\\ProcessCheckoutRequest' => __DIR__ . '/../..' . '/app/Http/Requests/ProcessCheckoutRequest.php',
-        'App\\Http\\Requests\\StoreCartItemRequest' => __DIR__ . '/../..' . '/app/Http/Requests/StoreCartItemRequest.php',
+        'App\\Http\\Controllers\\ProfileController' => __DIR__ . '/../..' . '/app/Http/Controllers/ProfileController.php',
+        'App\\Http\\Controllers\\ReviewController' => __DIR__ . '/../..' . '/app/Http/Controllers/ReviewController.php',
+        'App\\Http\\Middleware\\EnsureAdmin' => __DIR__ . '/../..' . '/app/Http/Middleware/EnsureAdmin.php',
         'App\\Models\\Admin' => __DIR__ . '/../..' . '/app/Models/Admin.php',
         'App\\Models\\Buku' => __DIR__ . '/../..' . '/app/Models/Buku.php',
         'App\\Models\\Cart' => __DIR__ . '/../..' . '/app/Models/Cart.php',
         'App\\Models\\CartItem' => __DIR__ . '/../..' . '/app/Models/CartItem.php',
-        'App\\Models\\DetailTransaksi' => __DIR__ . '/../..' . '/app/Models/DetailTransaksi.php',
+        'App\\Models\\Promo' => __DIR__ . '/../..' . '/app/Models/Promo.php',
         'App\\Models\\Review' => __DIR__ . '/../..' . '/app/Models/Review.php',
         'App\\Models\\Transaksi' => __DIR__ . '/../..' . '/app/Models/Transaksi.php',
         'App\\Models\\TransaksiDetail' => __DIR__ . '/../..' . '/app/Models/TransaksiDetail.php',
@@ -570,6 +587,7 @@ class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
         'App\\Models\\Wishlist' => __DIR__ . '/../..' . '/app/Models/Wishlist.php',
         'App\\Notifications\\PasswordChangedNotification' => __DIR__ . '/../..' . '/app/Notifications/PasswordChangedNotification.php',
         'App\\Notifications\\ResetPasswordNotification' => __DIR__ . '/../..' . '/app/Notifications/ResetPasswordNotification.php',
+        'App\\Notifications\\SendEmailVerificationCode' => __DIR__ . '/../..' . '/app/Notifications/SendEmailVerificationCode.php',
         'App\\Providers\\AppServiceProvider' => __DIR__ . '/../..' . '/app/Providers/AppServiceProvider.php',
         'Attribute' => __DIR__ . '/..' . '/symfony/polyfill-php80/Resources/stubs/Attribute.php',
         'Brick\\Math\\BigDecimal' => __DIR__ . '/..' . '/brick/math/src/BigDecimal.php',
@@ -2978,6 +2996,10 @@ class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
         'Illuminate\\View\\ViewFinderInterface' => __DIR__ . '/..' . '/laravel/framework/src/Illuminate/View/ViewFinderInterface.php',
         'Illuminate\\View\\ViewName' => __DIR__ . '/..' . '/laravel/framework/src/Illuminate/View/ViewName.php',
         'Illuminate\\View\\ViewServiceProvider' => __DIR__ . '/..' . '/laravel/framework/src/Illuminate/View/ViewServiceProvider.php',
+        'JnJairo\\Laravel\\Ngrok\\NgrokCommand' => __DIR__ . '/..' . '/jn-jairo/laravel-ngrok/src/NgrokCommand.php',
+        'JnJairo\\Laravel\\Ngrok\\NgrokProcessBuilder' => __DIR__ . '/..' . '/jn-jairo/laravel-ngrok/src/NgrokProcessBuilder.php',
+        'JnJairo\\Laravel\\Ngrok\\NgrokServiceProvider' => __DIR__ . '/..' . '/jn-jairo/laravel-ngrok/src/NgrokServiceProvider.php',
+        'JnJairo\\Laravel\\Ngrok\\NgrokWebService' => __DIR__ . '/..' . '/jn-jairo/laravel-ngrok/src/NgrokWebService.php',
         'Laravel\\Pail\\Console\\Commands\\PailCommand' => __DIR__ . '/..' . '/laravel/pail/src/Console/Commands/PailCommand.php',
         'Laravel\\Pail\\Contracts\\Printer' => __DIR__ . '/..' . '/laravel/pail/src/Contracts/Printer.php',
         'Laravel\\Pail\\File' => __DIR__ . '/..' . '/laravel/pail/src/File.php',

@@ -10,7 +10,6 @@ use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\Api\EmailController;
 use App\Http\Controllers\Api\CheckoutController;
-use App\Http\Controllers\Api\MidtransController;
 use App\Http\Controllers\Api\WishlistController;
 use App\Http\Controllers\Api\TransaksiController;
 use App\Http\Controllers\Api\Admin\BookController;
@@ -71,8 +70,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/reviews/{id}', [ReviewController::class, 'update']);
     Route::get('/books/{bookId}/reviews', [ReviewController::class, 'index']);
     // Checkout 
-    Route::post('/checkout/draft', [CheckoutController::class, 'createDraft'])->name('checkout.draft');
-    Route::post('/checkout/process', [CheckoutController::class, 'processPayment'])->name('checkout.process');
+    Route::post('/checkout/process-payment', [CheckoutController::class, 'processPayment']);
     // Transaksi 
     Route::get('/rajaongkir/provinces', [RajaongkirController::class, 'getProvinces']);
     Route::get('/rajaongkir/cities/{provinceId}', [RajaongkirController::class, 'getCities']);
@@ -84,8 +82,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/transaksi/{transaksi}/diterima', [TransaksiController::class, 'confirmReceived'])->name('transaksi.confirm_received');
 });
 
-// --- Webhook Midtrans ---
-Route::post('/midtrans/webhook', [MidtransController::class, 'notification'])->name('midtrans.webhook');
+// --- Checkout Routes ---
+Route::post('/checkout/notification', [CheckoutController::class, 'receiveNotification']);
 
 // --- Rajaongkir Routes ---
 Route::post('/rajaongkir/calculate-shipping', [RajaongkirController::class, 'calculateShipping']);

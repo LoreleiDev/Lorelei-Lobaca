@@ -260,6 +260,7 @@ export default function NavbarHome() {
                 console.error('Logout error:', err);
             } finally {
                 await logout();
+                localStorage.clear();
                 navigate('/');
                 Swal.fire('Berhasil!', 'Anda telah logout.', 'success');
             }

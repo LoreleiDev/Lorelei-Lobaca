@@ -158,11 +158,25 @@
     line-clamp: 2;
 }
 
-.scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
+.custom-scrollbar {
 
-.scrollbar-hide::-webkit-scrollbar {
-    display: none;
+    &::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    &::-webkit-scrollbar-track {
+        border-radius: 8px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        border-radius: 8px;
+        border: 2px solid rgba(0, 0, 0, 0.2);
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+        background: #000000;
+    }
+    scrollbar-width: thin;
+    scrollbar-color: #000000 rgba(244, 208, 63, 0.2);
 }

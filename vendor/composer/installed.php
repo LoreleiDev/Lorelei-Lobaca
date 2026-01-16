@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'laravel/laravel',
-        'pretty_version' => '1.0.0+no-version-set',
-        'version' => '1.0.0.0',
-        'reference' => null,
+        'pretty_version' => 'dev-main',
+        'version' => 'dev-main',
+        'reference' => 'bda30ab1c39d7cc824b49ba4ea0668230fbbc922',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -376,6 +376,15 @@
                 0 => 'v12.32.5',
             ),
         ),
+        'jn-jairo/laravel-ngrok' => array(
+            'pretty_version' => 'v3.0.3',
+            'version' => '3.0.3.0',
+            'reference' => 'ee4538bda6e4bf1c1b66ba1acacca2d0764855c8',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../jn-jairo/laravel-ngrok',
+            'aliases' => array(),
+            'dev_requirement' => true,
+        ),
         'kodova/hamcrest-php' => array(
             'dev_requirement' => true,
             'replaced' => array(
@@ -392,9 +401,9 @@
             'dev_requirement' => false,
         ),
         'laravel/laravel' => array(
-            'pretty_version' => '1.0.0+no-version-set',
-            'version' => '1.0.0.0',
-            'reference' => null,
+            'pretty_version' => 'dev-main',
+            'version' => 'dev-main',
+            'reference' => 'bda30ab1c39d7cc824b49ba4ea0668230fbbc922',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

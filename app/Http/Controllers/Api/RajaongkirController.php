@@ -167,94 +167,109 @@ class RajaongkirController extends Controller
      * Hitung ongkir berdasarkan origin, destination, weight, dan courier.
      */
     public function calculateShipping(Request $request): JsonResponse
-    {
-        // Validasi manual seperti Next.js
-        $origin = $request->input('origin');
-        $destination = $request->input('destination');
-        $weight = $request->input('weight');
-        $courier = $request->input('courier');
+{
+    $origin = $request->input('origin');
+    $destination = $request->input('destination');
+    $weight = $request->input('weight');
 
-        if (!$origin || !$destination || !$weight || !$courier) {
-            return response()->json(['error' => 'Missing required fields'], 400);
-        }
+    $availableCouriers = ['jne', 'tiki', 'pos', 'sicepat', 'jnt'];
 
-        if (!$this->apiKey) {
-            return response()->json(['error' => 'RajaOngkir API key not configured'], 500);
-        }
+    if (!$origin || !$destination || !$weight) {
+        return response()->json(['error' => 'Missing required fields: origin, destination, weight'], 400);
+    }
 
+    if (!$this->apiKey) {
+        return response()->json(['error' => 'RajaOngkir API key not configured'], 500);
+    }
+
+    $allServices = [];
+
+    foreach ($availableCouriers as $courierCode) {
         try {
-            // ✅ Kirim sebagai form-urlencoded ke /calculate/domestic-cost
             $response = Http::withHeaders([
                 'key' => $this->apiKey,
             ])->asForm()->post("{$this->apiBaseUrl}/calculate/domestic-cost", [
                         'origin' => $origin,
                         'destination' => (string) $destination,
                         'weight' => (string) $weight,
-                        'courier' => $courier,
+                        'courier' => $courierCode,
                         'price' => 'lowest',
                     ]);
 
             if (!$response->successful()) {
-                $errorBody = $response->body();
-                $errorMessage = 'Terjadi kesalahan saat menghubungi layanan pengiriman.';
-
-                // Coba parse error dari RajaOngkir
-                try {
-                    $errorJson = json_decode($errorBody, true, 512, JSON_THROW_ON_ERROR);
-                    if (isset($errorJson['meta']['message'])) {
-                        $errorMessage = $errorJson['meta']['message'];
-                    }
-                } catch (\Exception $e) {
-                    // ignore parse error
-                }
-
-                Log::error('RajaOngkir API error: ' . $errorMessage, ['body' => $errorBody]);
-
-                // User-friendly error messages
-                if (str_contains(strtolower($errorMessage), 'origin')) {
-                    return response()->json(['error' => 'System Origin Error: Please contact support (Origin ID Mismatch)'], 400);
-                }
-                if (str_contains(strtolower($errorMessage), 'destination')) {
-                    return response()->json(['error' => 'Invalid Destination: Please try re-selecting the location'], 400);
-                }
-
-                return response()->json(['error' => $errorMessage], 400);
+                Log::warning("RajaOngkir API error for courier {$courierCode}: " . $response->body());
+                continue;
             }
 
             $data = $response->json();
 
-            if (!isset($data['data']) || !is_array($data['data'])) {
-                return response()->json(['error' => 'Unexpected API response structure'], 500);
+            if (!isset($data['data']) || !is_array($data['data']) || empty($data['data'])) {
+                continue;
             }
 
-            // Format seperti Next.js
-            $courierMap = [];
             foreach ($data['data'] as $service) {
-                $courierName = $service['name'] ?? $service['code'] ?? 'Unknown';
-                if (!isset($courierMap[$courierName])) {
-                    $courierMap[$courierName] = [];
-                }
-                $courierMap[$courierName][] = [
-                    'service' => $service['service'] ?? 'N/A',
+                $serviceName = $service['service'] ?? 'N/A';
+                $serviceCost = (int) ($service['cost'] ?? PHP_INT_MAX);
+
+                $allServices[] = [
+                    'courier_code' => $courierCode,
+                    'courier' => $service['name'] ?? $courierCode,
+                    'service' => $serviceName,
                     'description' => $service['description'] ?? '',
-                    'cost' => $service['cost'] ?? 0,
+                    'cost' => $serviceCost,
                     'etd' => $service['etd'] ?? '-',
                 ];
             }
-
-            $results = [];
-            foreach ($courierMap as $courierName => $services) {
-                $results[] = [
-                    'courier' => $courierName,
-                    'services' => $services,
-                ];
-            }
-
-            return response()->json(['results' => $results], 200);
-
         } catch (\Exception $e) {
-            Log::error('Shipping API error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
-            return response()->json(['error' => 'Failed to fetch shipping costs'], 500);
+            Log::error("Shipping API error for courier {$courierCode}: " . $e->getMessage());
+            continue;
         }
     }
+
+    if (empty($allServices)) {
+        return response()->json(['error' => 'Tidak ditemukan layanan pengiriman untuk tujuan ini.'], 400);
+    }
+
+    usort($allServices, function ($a, $b) {
+        return $a['cost'] <=> $b['cost'];
+    });
+
+    $cheapestCost = $allServices[0]['cost'];
+    $priceThreshold = $cheapestCost + 5000;
+
+    $filteredServices = array_filter($allServices, function ($service) use ($priceThreshold) {
+        return $service['cost'] <= $priceThreshold;
+    });
+
+    usort($filteredServices, function ($a, $b) {
+        return $a['cost'] <=> $b['cost'];
+    });
+
+    $results = [];
+    $courierMap = [];
+
+    foreach ($filteredServices as $service) {
+        $courierName = $service['courier'];
+        $courierCode = $service['courier_code'];
+
+        if (!isset($courierMap[$courierName])) {
+            $courierMap[$courierName] = [
+                'courier_code' => $courierCode,
+                'courier' => $courierName,
+                'services' => [],
+            ];
+        }
+
+        $courierMap[$courierName]['services'][] = [
+            'service' => $service['service'],
+            'description' => $service['description'],
+            'cost' => $service['cost'],
+            'etd' => $service['etd'],
+        ];
+    }
+
+    $results = array_values($courierMap);
+
+    return response()->json(['results' => $results], 200);
+}
 }

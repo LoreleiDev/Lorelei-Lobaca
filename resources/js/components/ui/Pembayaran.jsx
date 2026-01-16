@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -25,9 +25,29 @@ const paymentMethods = [
         description: "Gunakan ShopeePay untuk pembayaran. Cepat, aman, dan praktis.",
     },
     {
-        id: "bank-transfer",
-        name: "TRANSFER BANK",
-        description: "Metode tradisional yang dapat diandalkan. Transfer melalui ATM atau mobile banking.",
+        id: "bca_transfer",
+        name: "BCA Transfer",
+        description: "Transfer antar rekening BCA.",
+    },
+    {
+        id: "bni_transfer",
+        name: "BNI Transfer",
+        description: "Transfer antar rekening BNI.",
+    },
+    {
+        id: "bri_transfer",
+        name: "BRI Transfer",
+        description: "Transfer antar rekening BRI.",
+    },
+    {
+        id: "mandiri_transfer",
+        name: "Mandiri Transfer",
+        description: "Transfer antar rekening Mandiri.",
+    },
+    {
+        id: "permata_transfer",
+        name: "Permata Transfer",
+        description: "Transfer antar rekening Permata.",
     },
 ];
 
@@ -39,6 +59,8 @@ export default function PaymentSelector() {
     const [confirmed, setConfirmed] = useState(false);
     const navigate = useNavigate();
 
+    // Buat array ref untuk setiap item
+    const itemRefs = useRef([]);
 
     useEffect(() => {
         const savedPaymentMethodId = localStorage.getItem('selected_payment_method');
@@ -56,10 +78,30 @@ export default function PaymentSelector() {
 
             if (e.key === "ArrowDown") {
                 e.preventDefault();
-                setSelectedIndex((prev) => (prev + 1) % paymentMethods.length);
+                const newIndex = (selectedIndex + 1) % paymentMethods.length;
+                setSelectedIndex(newIndex);
+
+                // Scroll ke item baru
+                if (itemRefs.current[newIndex]) {
+                    itemRefs.current[newIndex].scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center', // Pusatkan item di tengah viewport
+                    });
+                }
+
             } else if (e.key === "ArrowUp") {
                 e.preventDefault();
-                setSelectedIndex((prev) => (prev - 1 + paymentMethods.length) % paymentMethods.length);
+                const newIndex = (selectedIndex - 1 + paymentMethods.length) % paymentMethods.length;
+                setSelectedIndex(newIndex);
+
+                // Scroll ke item baru
+                if (itemRefs.current[newIndex]) {
+                    itemRefs.current[newIndex].scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center',
+                    });
+                }
+
             } else if (e.key === "Enter") {
                 e.preventDefault();
                 handleConfirm();
@@ -68,13 +110,12 @@ export default function PaymentSelector() {
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [confirmed]);
+    }, [confirmed, selectedIndex]); // Tambahkan selectedIndex ke dependency
 
     const handleConfirm = () => {
         setConfirmed(true);
         const selectedMethod = paymentMethods[selectedIndex];
         localStorage.setItem('selected_payment_method', selectedMethod.id);
-
 
         setTimeout(() => {
             navigate('/cart');
@@ -99,8 +140,8 @@ export default function PaymentSelector() {
                 </div>
             </div>
 
-            <div className="flex-1 relative overflow-hidden">
-                <div className="w-full h-full px-8 relative">
+            <div className="flex-1 relative overflow-y-auto custom-scrollbar">
+                <div className="w-full px-8 relative">
                     {/* List */}
                     <div className="relative z-10 py-4">
                         {paymentMethods.map((method, index) => {
@@ -112,6 +153,8 @@ export default function PaymentSelector() {
                                     key={method.id}
                                     className="transition-all duration-300"
                                     style={{ height: `${ITEM_HEIGHT}px` }}
+                                    // Tambahkan ref ke div
+                                    ref={(el) => (itemRefs.current[index] = el)}
                                 >
                                     <button
                                         onClick={() => !confirmed && setSelectedIndex(index)}
@@ -159,7 +202,7 @@ export default function PaymentSelector() {
 
             {/* Footer */}
             <div className="bg-[#2a2a2a] text-white px-8 py-4 shrink-0 z-20">
-                <div className="min-h-[60px]">
+                <div className="min-h-15">
                     <p
                         key={selectedIndex}
                         className="text-base leading-relaxed mb-4 text-gray-300 animate-in fade-in slide-in-from-bottom-2 duration-300"

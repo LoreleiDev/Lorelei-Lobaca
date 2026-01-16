@@ -44,10 +44,24 @@ const getCategoryLabels = (categoryString) => {
 
 const paymentMethodLabels = {
     "ovo": "OVO",
-    "gopay": "GOPAY",   
+    "gopay": "GoPay",
     "dana": "DANA",
-    "shopeepay": "SHOPEEPAY",
+    "shopeepay": "Shopee Pay",
+    "bca_transfer": "BCA Transfer",
+    "bni_transfer": "BNI Transfer",
+    "bri_transfer": "BRI Transfer",
+    "mandiri_transfer": "Mandiri Transfer",
+    "permata_transfer": "Permata Transfer",
     "bank-transfer": "Transfer Bank"
+};
+
+const formatCourierName = (name) => {
+    if (!name) return "Belum Dipilih";
+    return name
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
 };
 
 export default function KeranjangPage() {
@@ -56,13 +70,15 @@ export default function KeranjangPage() {
     const [cartItems, setCartItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
-    // Ambil data dari localStorage
     const [ongkir, setOngkir] = useState(() => {
         const saved = localStorage.getItem('shipping_cost');
         return saved ? parseInt(saved) : 0;
     });
     const [selectedCourierName, setSelectedCourierName] = useState(() => {
         return localStorage.getItem('selected_courier_name') || "";
+    });
+    const [Youraddress, setYouraddress] = useState(() => {
+        return localStorage.getItem('alamat_lengkap') || "";
     });
 
     const fetchCart = async () => {
@@ -90,17 +106,15 @@ export default function KeranjangPage() {
     useEffect(() => {
         fetchCart();
 
-        // Baca dari localStorage
         const savedPayment = localStorage.getItem('selected_payment_method');
         if (savedPayment) setSelectedPaymentMethod(savedPayment);
     }, []);
 
     useEffect(() => {
-        // Update state jika data di localStorage berubah (misalnya dari AlamatKurirPage)
         const handleStorageChange = () => {
-            const savedOngkir = localStorage.getItem('shipping_cost');
+            const savedAddress = localStorage.getItem('alamat_lengkap');
             const savedCourierName = localStorage.getItem('selected_courier_name');
-            setOngkir(savedOngkir ? parseInt(savedOngkir) : 0);
+            setYouraddress(savedAddress || "");
             setSelectedCourierName(savedCourierName || "");
         };
 
@@ -108,8 +122,16 @@ export default function KeranjangPage() {
         return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
 
-    const updateQuantity = async (itemId, newQuantity) => {
+    const updateQuantity = async (itemId, newQuantity, maxStok) => {
         if (newQuantity < 1) return;
+
+        if (newQuantity > maxStok) {
+            Toast.fire({
+                icon: "warning",
+                title: `Stok hanya tersedia ${maxStok}. Jumlah tidak bisa ditambah.`
+            });
+            return;
+        }
 
         const token = localStorage.getItem('user_token');
         const res = await fetch(`/api/cart/${itemId}`, {
@@ -123,7 +145,7 @@ export default function KeranjangPage() {
 
         if (res.ok) {
             Toast.fire({ icon: "success", title: "Jumlah berhasil diubah." });
-            fetchCart(); // Refresh cart items
+            fetchCart();
         } else {
             Toast.fire({ icon: "error", title: "Gagal mengubah jumlah." });
         }
@@ -140,10 +162,18 @@ export default function KeranjangPage() {
 
         if (res.ok) {
             Toast.fire({ icon: "success", title: "Item berhasil dihapus." });
-            fetchCart(); // Refresh cart items
+            fetchCart();
         } else {
             Toast.fire({ icon: "error", title: "Gagal menghapus item." });
         }
+    };
+
+    const navigateToBookDetail = (slug, bookId) => {
+        if (!slug || !bookId) {
+            Toast.fire({ icon: "info", title: "Informasi buku tidak lengkap untuk navigasi." });
+            return;
+        }
+        navigate(`/buku/${slug}`, { state: { id: bookId } });
     };
 
     const calculateTotals = () => {
@@ -174,28 +204,28 @@ export default function KeranjangPage() {
     const totalBayar = finalTotal + ongkir;
 
     const handlePilihAlamatKurir = () => {
-        navigate('/alamat-kurir'); // Ganti dengan path halaman input kamu
+        navigate('/alamat-kurir');
     };
 
     const handleCheckout = async () => {
-        // Ambil data dari localStorage
         const alamatLengkap = localStorage.getItem('alamat_lengkap');
         const ongkirValue = localStorage.getItem('shipping_cost');
         const kurirCode = localStorage.getItem('selected_courier_code');
         const destinationDistrictId = localStorage.getItem('destination_district_id');
+        const paymentMethodFromLS = localStorage.getItem('selected_payment_method');
 
         if (!alamatLengkap || !ongkirValue || !kurirCode || !destinationDistrictId) {
             Toast.fire({ icon: "error", title: "Lengkapi alamat dan kurir terlebih dahulu." });
             return;
         }
-        if (!selectedPaymentMethod) {
-            Toast.fire({ icon: "error", title: "Pilih metode pembayaran." });
+        if (!paymentMethodFromLS) {
+            Toast.fire({ icon: "error", title: "Pilih metode pembayaran terlebih dahulu." });
             return;
         }
 
         const token = localStorage.getItem('user_token');
         try {
-            const res = await fetch('/api/checkout/draft', {
+            const res = await fetch('/api/checkout/process-payment', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -206,19 +236,84 @@ export default function KeranjangPage() {
                     kurir: kurirCode,
                     ongkir: parseInt(ongkirValue),
                     destination_district_id: parseInt(destinationDistrictId),
-                    // origin_district_id akan diambil dari .env di backend
+                    payment_method: paymentMethodFromLS
                 })
             });
 
+            // --- BACA RESPON HANYA SEKALI ---
+            const responseText = await res.text();
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (e) {
+                console.error("Failed to parse JSON response:", e);
+                console.error("Raw response was:", responseText);
+                Toast.fire({ icon: "error", title: "Respon dari server tidak valid." });
+                return;
+            }
+            console.log("Parsed response ", data);
+            // --- END BACA RESPON ---
+
             if (res.ok) {
-                const data = await res.json();
-                const snapToken = data.data.snap_token;
-                window.location.href = `https://app.sandbox.midtrans.com/snap/v3/redirection/${snapToken}`;
+                console.log("Response OK, checking for redirect, VA, or QR Code...");
+                const midtransResponse = data.data;
+
+                // Cek redirect_url (untuk halaman pembayaran Midtrans)
+                if (midtransResponse.redirect_url) {
+                    console.log("Redirecting to Midtrans page:", midtransResponse.redirect_url);
+                    window.location.href = midtransResponse.redirect_url;
+                    return; // Stop execution here if redirecting
+                }
+
+                // Cek apakah ini Virtual Account (VA)
+                const vaNumbers = midtransResponse.va_numbers;
+                const paymentType = midtransResponse.payment_type;
+                const grossAmount = midtransResponse.gross_amount;
+                const orderId = midtransResponse.order_id;
+
+                if (paymentType === 'bank_transfer' && vaNumbers && vaNumbers.length > 0) {
+                    console.log("Virtual Account detected:", vaNumbers);
+                    // Navigate to PaymentVa page with VA details
+                    navigate('/payment-va', {
+                        state: {
+                            vaNumbers,
+                            orderId,
+                            grossAmount: parseFloat(grossAmount),
+                            paymentMethod: paymentMethodFromLS // Kirim metode pembayaran asli
+                        }
+                    });
+                    return; // Stop execution here if navigating to VA page
+                }
+
+                // Cek apakah ini QRIS
+                let qrCodeData = null;
+                if (midtransResponse.actions && Array.isArray(midtransResponse.actions)) {
+                    const qrisAction = midtransResponse.actions.find(action => action.name === 'generate-qr-code');
+                    if (qrisAction && qrisAction.url) {
+                        qrCodeData = qrisAction.url;
+                    }
+                }
+
+                if (qrCodeData) {
+                    console.log("QRIS detected, navigating to Qris page");
+                    navigate('/payment-qris', { state: { qrCodeData, orderId } });
+                    return; // Stop execution here if navigating to Qris page
+                }
+
+                // Jika tidak ada redirect_url, VA, atau QRIS, mungkin untuk CC atau metode lain
+                console.log("No specific action found, showing generic message.");
+                Toast.fire({ icon: "info", title: `Silakan selesaikan pembayaran untuk ${paymentType || 'metode pembayaran'}.` });
+
             } else {
-                const error = await res.json();
-                Toast.fire({ icon: "error", title: error.message || "Gagal checkout." });
+                // Gunakan data.error dari respons JSON yang sudah diparse
+                Toast.fire({
+                    icon: "error",
+                    title: data.message || "Gagal checkout.",
+                    text: data.error || ""
+                });
             }
         } catch (error) {
+            console.error("Network error during checkout:", error);
             Toast.fire({ icon: "error", title: "Kesalahan jaringan." });
         }
     };
@@ -276,17 +371,24 @@ export default function KeranjangPage() {
                                             const discountAmount = discountPercent > 0 ? Math.round(originalPrice * discountPercent / 100) : 0;
                                             const discountedPrice = originalPrice - discountAmount;
                                             const itemTotal = discountedPrice * item.jumlah;
+                                            const maxStok = item.buku.stok;
 
                                             return (
                                                 <div key={item.cart_item_id} className="p-4 flex flex-col sm:flex-row gap-4">
                                                     <img
-                                                        src={item.buku.foto || "/placeholder.svg"}
+                                                        src={item.buku.foto}
                                                         alt={item.buku.judul}
-                                                        className="w-24 h-32 object-cover rounded-md border border-gray-200"
+                                                        className="w-24 h-32 object-cover rounded-md border border-gray-200 cursor-pointer"
+                                                        onClick={() => navigateToBookDetail(item.buku.slug, item.buku.id)}
                                                     />
                                                     <div className="flex-1">
                                                         <div className="flex justify-between">
-                                                            <h3 className="font-semibold text-gray-800">{item.buku.judul}</h3>
+                                                            <h3
+                                                                className="font-semibold text-gray-800 cursor-pointer hover:underline"
+                                                                onClick={() => navigateToBookDetail(item.buku.slug, item.buku.id)}
+                                                            >
+                                                                {item.buku.judul}
+                                                            </h3>
                                                             <button
                                                                 onClick={() => removeItem(item.cart_item_id)}
                                                                 className="cursor-pointer text-red-600 hover:text-red-800 flex items-center gap-1 text-sm"
@@ -312,14 +414,14 @@ export default function KeranjangPage() {
                                                         <div className="mt-3 flex items-center justify-between">
                                                             <div className="flex items-center gap-2">
                                                                 <button
-                                                                    onClick={() => updateQuantity(item.cart_item_id, item.jumlah - 1)}
+                                                                    onClick={() => updateQuantity(item.cart_item_id, item.jumlah - 1, Infinity)}
                                                                     className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
                                                                 >
                                                                     <Minus size={16} />
                                                                 </button>
                                                                 <span className="text-gray-800 font-medium">{item.jumlah}</span>
                                                                 <button
-                                                                    onClick={() => updateQuantity(item.cart_item_id, item.jumlah + 1)}
+                                                                    onClick={() => updateQuantity(item.cart_item_id, item.jumlah + 1, maxStok)}
                                                                     className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
                                                                 >
                                                                     <Plus size={16} />
@@ -362,9 +464,9 @@ export default function KeranjangPage() {
                                                             </div>
                                                         </div>
 
-                                                        {item.jumlah > item.buku.stok && (
+                                                        {item.jumlah > maxStok && (
                                                             <p className="text-red-600 text-xs mt-2">
-                                                                Stok hanya {item.buku.stok} buku
+                                                                Stok hanya {maxStok} buku
                                                             </p>
                                                         )}
                                                     </div>
@@ -434,20 +536,24 @@ export default function KeranjangPage() {
                                     </div>
 
                                     <div className="mt-6 space-y-4">
-                                        {/* Input Alamat & Tombol Checkout */}
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                                 Alamat & Kurir
                                             </label>
-                                            <div className="flex items-center justify-between gap-2 mt-2 px-2">
-                                                <span className="text-gray-500 font-medium">
-                                                    {selectedCourierName || "Belum Lengkap"}
-                                                </span>
+                                            <div className="mt-2 px-2 py-1 bg-gray-50 rounded border border-gray-200">
+                                                <p className="text-gray-800 text-xs italic">
+                                                    {Youraddress || "Alamat belum diatur. Silakan lengkapi."}
+                                                </p>
+                                                <p className="text-gray-800 text-md mt-1 font-bold">
+                                                    Kurir: {formatCourierName(selectedCourierName)}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center justify-end gap-2 mt-2 px-2">
                                                 <button
                                                     onClick={handlePilihAlamatKurir}
                                                     className="cursor-pointer text-blue-600 hover:text-blue-800 text-sm underline"
                                                 >
-                                                    Lengkapi
+                                                    {Youraddress && selectedCourierName ? "Ubah" : "Atur"}
                                                 </button>
                                             </div>
                                         </div>
@@ -456,13 +562,13 @@ export default function KeranjangPage() {
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Metode Pembayaran</label>
                                             <div className="flex items-center justify-between gap-2 mt-2 px-2">
                                                 <span className="text-gray-500 font-medium">
-                                                    {paymentMethodLabels[selectedPaymentMethod] || "Pilih Pembayaran"}
+                                                    {paymentMethodLabels[selectedPaymentMethod] || "Belum Dipilih"}
                                                 </span>
                                                 <button
                                                     onClick={() => navigate('/payment')}
                                                     className="cursor-pointer text-blue-600 hover:text-blue-800 text-sm underline"
                                                 >
-                                                    Ganti
+                                                    Ubah
                                                 </button>
                                             </div>
                                         </div>
@@ -471,7 +577,7 @@ export default function KeranjangPage() {
                                     <Button
                                         onClick={handleCheckout}
                                         className="w-full mt-6 bg-blue-600 hover:bg-blue-700 py-3 font-medium"
-                                        disabled={!selectedCourierName} // Disable jika belum lengkap
+                                        disabled={!Youraddress || !selectedPaymentMethod}
                                     >
                                         Checkout
                                     </Button>

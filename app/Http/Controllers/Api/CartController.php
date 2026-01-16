@@ -13,25 +13,18 @@ use Illuminate\Support\Facades\Auth;
 
 class CartController extends Controller
 {
-    /**
-     * Tampilkan isi keranjang user.
-     */
     public function index(Request $request): JsonResponse
     {
-        $user = $request->user(); // atau Auth::user();
+        $user = $request->user();
 
         $cart = $user->cart()->with('items.buku')->first();
-
-        // Jika user belum punya cart, buatkan
         if (!$cart) {
             $cart = $user->cart()->create();
         }
 
-        // Ambil items, dan tambahkan logika diskon
         $items = $cart->items->map(function ($item) {
             $buku = $item->buku;
 
-            // Cek apakah buku ini punya promo aktif
             $now = Carbon::now('Asia/Jakarta');
             $activePromo = Promo::whereHas('books', function ($q) use ($buku) {
                 $q->where('promo_buku.buku_id', $buku->buku_id);
@@ -53,10 +46,19 @@ class CartController extends Controller
                 ->first();
 
             $discountPercent = 0;
+            $discountPrice = (int) $buku->harga;
+            $hasPromo = false;
+            $promoName = null;
+
             if ($activePromo) {
                 $promoBook = $activePromo->books()->where('promo_buku.buku_id', $buku->buku_id)->first();
                 if ($promoBook && $promoBook->pivot) {
                     $discountPercent = $promoBook->pivot->discount_percent;
+                    if (is_numeric($discountPercent) && $discountPercent > 0) {
+                        $discountPrice = $buku->harga - ($buku->harga * $discountPercent / 100);
+                        $hasPromo = true;
+                        $promoName = $activePromo->name;
+                    }
                 }
             }
 
@@ -64,6 +66,7 @@ class CartController extends Controller
                 'cart_item_id' => $item->cart_item_id,
                 'jumlah' => $item->jumlah,
                 'buku' => [
+                    'id' => $buku->buku_id,
                     'buku_id' => $buku->buku_id,
                     'judul' => $buku->judul,
                     'penulis' => $buku->penulis,
@@ -73,6 +76,12 @@ class CartController extends Controller
                     'berat' => $buku->berat,
                     'stok' => $buku->stok,
                     'discount_percent' => (int) $discountPercent,
+                    'originalPrice' => (int) $buku->harga,
+                    'discountPrice' => $discountPrice,
+                    'has_promo' => $hasPromo,
+                    'promo_name' => $promoName,
+                    'slug' => str($buku->judul)->slug()->toString(),
+                    'rating' => (float) $buku->average_rating,
                 ]
             ];
         });
@@ -86,9 +95,6 @@ class CartController extends Controller
         ], 200);
     }
 
-    /**
-     * Tambah item ke keranjang.
-     */
     public function store(Request $request): JsonResponse
     {
         $user = Auth::user();
@@ -100,30 +106,12 @@ class CartController extends Controller
 
         $buku = Buku::findOrFail($validated['buku_id']);
 
-        if ($buku->stok < $validated['jumlah']) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Stok buku tidak mencukupi.',
-            ], 422);
-        }
-
-        // Ambil atau buat cart user
         $cart = $user->cart()->firstOrCreate([]);
 
-        // Cek apakah buku sudah ada di cart
         $existingItem = $cart->items()->where('buku_id', $validated['buku_id'])->first();
 
         if ($existingItem) {
-            $newJumlah = $existingItem->jumlah + $validated['jumlah'];
-
-            if ($buku->stok < $newJumlah) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Stok buku tidak mencukupi setelah penambahan.',
-                ], 422);
-            }
-
-            $existingItem->update(['jumlah' => $newJumlah]);
+            $existingItem->increment('jumlah', $validated['jumlah']);
         } else {
             $cart->items()->create($validated);
         }
@@ -135,9 +123,6 @@ class CartController extends Controller
         ], 201);
     }
 
-    /**
-     * Update jumlah item di keranjang.
-     */
     public function update(Request $request, $id): JsonResponse
     {
         $cartItem = CartItem::with('cart.user', 'buku')->findOrFail($id);
@@ -148,15 +133,6 @@ class CartController extends Controller
             'jumlah' => 'required|integer|min:1',
         ]);
 
-        $buku = $cartItem->buku;
-
-        if ($buku->stok < $validated['jumlah']) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Stok buku tidak mencukupi.',
-            ], 422);
-        }
-
         $cartItem->update(['jumlah' => $validated['jumlah']]);
 
         return response()->json([
@@ -166,9 +142,6 @@ class CartController extends Controller
         ], 200);
     }
 
-    /**
-     * Hapus item dari keranjang.
-     */
     public function destroy($id): JsonResponse
     {
         $cartItem = CartItem::with('cart.user')->findOrFail($id);
@@ -182,9 +155,6 @@ class CartController extends Controller
         ], 200);
     }
 
-    /**
-     * Kosongkan seluruh isi keranjang.
-     */
     public function clear(): JsonResponse
     {
         $user = Auth::user();
@@ -200,9 +170,6 @@ class CartController extends Controller
         ], 200);
     }
 
-    /**
-     * Cek kepemilikan item.
-     */
     private function authorizeItem(CartItem $item)
     {
         if ($item->cart->user_id !== Auth::id()) {
