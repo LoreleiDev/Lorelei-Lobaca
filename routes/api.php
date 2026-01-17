@@ -105,6 +105,6 @@ Route::middleware(['api', 'auth:sanctum,admin', 'admin'])->prefix('admin')->grou
     Route::get('/ulasan/book/{bookId}', [App\Http\Controllers\Api\Admin\ReviewController::class, 'showReviewsByBook']);
     Route::post('/ulasan/{reviewId}/to-testimonial', [App\Http\Controllers\Api\Admin\ReviewController::class, 'convertToTestimonial']);
     Route::delete('/ulasan/{reviewId}/remove-testimonial', [App\Http\Controllers\Api\Admin\ReviewController::class, 'removeAsTestimonial']);
-    Route::get('/transaksi', [\App\Http\Controllers\Api\Admin\TransaksiController::class, 'index']);
-    Route::put('/transaksi/{transaksi}/kirim', [\App\Http\Controllers\Api\Admin\TransaksiController::class, 'updateToShipped']);
+    Route::put('/transaksi/{id}/approve', [App\Http\Controllers\Api\Admin\TransaksiController::class, 'approve']);
+    Route::put('/transaksi/{id}/reject', [App\Http\Controllers\Api\Admin\TransaksiController::class, 'reject']);
 });

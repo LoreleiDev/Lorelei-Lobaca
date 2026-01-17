@@ -4,14 +4,13 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
     public function up(): void
     {
-        
+
         Schema::create('carts', function (Blueprint $table) {
             $table->id('cart_id'); // Primary key
             $table->foreignId('user_id')->constrained('users', 'id')->onDelete('cascade');
@@ -26,7 +25,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        
+
         Schema::create('transaksi', function (Blueprint $table) {
             $table->bigIncrements('transaksi_id');
             $table->unsignedBigInteger('user_id');
@@ -48,6 +47,8 @@ return new class extends Migration
             ])->default('pesanan-disiapkan');
             $table->string('snap_token')->nullable();
             $table->string('transaction_id_midtrans')->nullable();
+            $table->string('admin_action_status')->default('pending');
+            $table->unsignedBigInteger('admin_id_proses')->nullable();
             $table->string('resi_pengiriman')->nullable();
             $table->timestamp('tanggal_dikirim')->nullable();
             $table->timestamp('tanggal_diterima')->nullable();
@@ -61,7 +62,7 @@ return new class extends Migration
             $table->unsignedBigInteger('transaksi_id');
             $table->unsignedBigInteger('buku_id');
             $table->integer('jumlah');
-            $table->decimal('harga_satuan', 10, 2); 
+            $table->decimal('harga_satuan', 10, 2);
             $table->timestamps();
 
             $table->foreign('transaksi_id')->references('transaksi_id')->on('transaksi')->onDelete('cascade');
@@ -74,7 +75,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        
+
         //
     }
 };

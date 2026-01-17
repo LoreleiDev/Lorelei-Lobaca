@@ -35,6 +35,7 @@ import AdminInventory from "./components/admin/InventoryPages";
 import AdminEditInventory from "./components/admin/BookEditPages";
 import AdminPromoSetting from "./components/admin/PromoSetting";
 import AdminUlasanPage from "./components/admin/UlasanUser";
+import AdminPesananPage from "./components/admin/KelolaPesanan";
 
 ReactDOM.createRoot(document.getElementById("app")).render(
     <React.StrictMode>
@@ -75,6 +76,7 @@ ReactDOM.createRoot(document.getElementById("app")).render(
                     <Route path="/admin/inventory/:id" element={<AdminEditInventory />} />
                     <Route path="/admin/promo" element={<AdminPromoSetting />} />
                     <Route path="/admin/ulasan" element={<AdminUlasanPage />} />
+                    <Route path="/admin/pesanan" element={<AdminPesananPage />} />
                 </Route>
             </Routes>
         </BrowserRouter>

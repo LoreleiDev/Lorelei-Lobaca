@@ -168,7 +168,7 @@ const MobileBookCard = ({
                         </button>
 
                         {mobileMenuOpen[book.buku_id] && (
-                            <div className="absolute right-0 top-full mt-1 bg-white border border-border rounded-lg shadow-lg z-50 min-w-[140px]">
+                            <div className="absolute right-0 top-full mt-1 bg-white border border-border rounded-lg shadow-lg z-50 min-w-35">
                                 <button
                                     onClick={() => {
                                         setSelectedBook(book);
@@ -710,7 +710,7 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                     ) : (
                         <Card className="bg-white/80 backdrop-blur-sm shadow-lg border-0 overflow-hidden">
                             <div className="overflow-x-auto">
-                                <div className="min-w-[1000px]">
+                                <div className="min-w-250">
                                     <table className="w-full text-sm">
                                         <thead>
                                             <tr className="border-b border-border bg-linear-to-r from-slate-50 to-blue-50/50">

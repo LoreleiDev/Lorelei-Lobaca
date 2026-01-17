@@ -22,7 +22,7 @@ const navItems = [
     { icon: Package, label: "Inventory", href: "/admin/inventory" },
     { icon: Package, label: "Promo", href: "/admin/promo" },
     { icon: BookText, label: "Ulasan Pengguna", href: "/admin/ulasan" },
-    { icon: ShoppingCart, label: "Pesanan", href: "/admin/orders" },
+    { icon: ShoppingCart, label: "Pesanan", href: "/admin/pesanan" },
     { icon: Settings, label: "Pengaturan", href: "/admin/settings" },
 ];
 

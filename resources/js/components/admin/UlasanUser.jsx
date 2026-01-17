@@ -142,7 +142,7 @@ export default function AdminUlasanPage() {
                                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
                                     </div>
                                 ) : (
-                                    <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
+                                    <div className="space-y-2 max-h-125 overflow-y-auto pr-2">
                                         {books.length > 0 ? (
                                             books.map((book) => (
                                                 <div
@@ -190,7 +190,7 @@ export default function AdminUlasanPage() {
                                                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
                                             </div>
                                         ) : (
-                                            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+                                            <div className="space-y-4 max-h-125 overflow-y-auto pr-2">
                                                 {reviews.length > 0 ? (
                                                     reviews.map((rev) => (
                                                         <div key={rev.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
