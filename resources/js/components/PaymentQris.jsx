@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-
 import Swal from "sweetalert2";
 
 const Toast = Swal.mixin({
@@ -19,90 +18,142 @@ const Toast = Swal.mixin({
 export default function PaymentQris() {
     const location = useLocation();
     const navigate = useNavigate();
+    const { qrCodeData, orderId } = location.state || {};
 
-    const { qrCodeUrl, orderId } = location.state || {};
-
-    console.log("PaymentQris - Location State:", location.state);
-    console.log("PaymentQris - Extracted qrCodeUrl:", qrCodeUrl);
-
-    console.log("PaymentQris - Extracted orderId:", orderId);
-
-    const [countdown, setCountdown] = useState(15 * 60);
+    const [paymentStatus, setPaymentStatus] = useState('pending');
 
     useEffect(() => {
+        if (!orderId) return;
 
-        if (!qrCodeUrl || !orderId) {
-            console.error("PaymentQris - Missing qrCodeUrl or orderId in state.");
-            Toast.fire({ icon: "error", title: "Data pembayaran tidak valid." });
-            navigate('/cart', { replace: true });
-            return;
-        }
+        const pollStatus = async () => {
+            try {
+                const token = localStorage.getItem('user_token');
+                const res = await fetch(`/api/transaction/${orderId}/status`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
 
-        let timer;
-        if (countdown > 0) {
-            timer = setInterval(() => {
-                setCountdown(prev => prev - 1);
-            }, 1000);
-        } else {
-            Toast.fire({ icon: "warning", title: "Waktu pembayaran habis." });
-            navigate('/transaksi', { state: { orderId }, replace: true });
-        }
+                if (res.ok) {
+                    const data = await res.json();
+                    const status = data.data.status_transaksi;
 
-        return () => {
-            if (timer) clearInterval(timer);
+                    if (status === 'transaksi-sukses' || status === 'transaksi-diterima') {
+                        setPaymentStatus('success');
+                    } else if (status === 'transaksi-kadaluarsa' || status === 'transaksi-ditolak') {
+                        setPaymentStatus('failed');
+                    }
+                }
+            } catch (error) {
+                console.error("Polling error:", error);
+            }
         };
-    }, [qrCodeUrl, orderId, navigate]);
 
-    console.log("PaymentQris - Render, qrCodeUrl:", qrCodeUrl, "orderId:", orderId, "countdown:", countdown);
+        const intervalId = setInterval(pollStatus, 15000);
+        pollStatus();
+        return () => clearInterval(intervalId);
+    }, [orderId]);
 
-
-    if (!qrCodeUrl || !orderId) {
+    if (!qrCodeData || !orderId) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-100">
-                <p className="text-gray-600">Memuat...</p>
+            <div className="min-h-screen flex items-center justify-center bg-yellow-50">
+                <p className="text-yellow-800 text-lg font-medium">Memuat...</p>
             </div>
         );
     }
 
-    const minutes = Math.floor(countdown / 60);
-    const seconds = countdown % 60;
+    if (paymentStatus === 'success') {
+        return (
+            <div className="min-h-screen bg-linear-to-b from-yellow-50 to-yellow-100 py-8 px-4">
+                <div className="max-w-md mx-auto">
+                    <div className="bg-white rounded-2xl shadow-xl p-8 text-center border-2 border-yellow-300">
+                        <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-800 mb-2">Pembayaran Berhasil!</h2>
+                        <p className="text-gray-600 mb-6">
+                            Terima kasih! Pembayaran untuk pesanan <span className="font-mono font-bold text-yellow-700"><br />{orderId} <br /></span> telah diterima.
+                        </p>
+                        <Button
+                            onClick={() => navigate('/transaksi')}
+                            className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+                        >
+                            Lihat Detail Transaksi
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (paymentStatus === 'failed') {
+        return (
+            <div className="min-h-screen bg-linear-to-b from-yellow-50 to-yellow-100 py-8 px-4">
+                <div className="max-w-md mx-auto">
+                    <div className="bg-white rounded-2xl shadow-xl p-8 text-center border-2 border-yellow-300">
+                        <div className="w-20 h-20 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-800 mb-2">Pembayaran Gagal</h2>
+                        <p className="text-gray-600 mb-6">
+                            Waktu pembayaran untuk pesanan <span className="font-mono font-bold text-yellow-700"><br />{orderId} <br /></span> telah habis atau dibatalkan.
+                        </p>
+                        <Button
+                            onClick={() => navigate('/cart')}
+                            className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+                        >
+                            Kembali ke Keranjang
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div className="min-h-screen bg-gray-50 py-8">
-            <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-2xl font-bold text-center mb-4">Scan QRIS untuk Pembayaran</h2>
-                <p className="text-center text-gray-600 mb-2">Order ID: {orderId}</p>
-                <p className="text-center text-gray-600 mb-6">Sisa Waktu: {minutes}:{seconds < 10 ? '0' : ''}{seconds}</p>
+        <div className="min-h-screen bg-linear-to-b from-yellow-50 to-yellow-100 py-8 px-4">
+            <div className="max-w-md mx-auto">
+                <div className="bg-white rounded-2xl shadow-xl overflow-hidden border-2 border-yellow-300">
+                    <div className="bg-yellow-500 py-5 text-center">
+                        <h1 className="text-2xl font-bold text-white tracking-wide">Bayar dengan QRIS</h1>
+                    </div>
 
-                <div className="flex justify-center mb-6">
-                    <img
-                        src={qrCodeUrl}
-                        alt="QRIS Code"
-                        className="w-48 h-48 object-contain"
-                        onError={(e) => {
-                            console.error("Failed to load QR image from URL:", qrCodeUrl);
+                    <div className="p-6">
+                        <div className="text-center mb-6">
+                            <p className="text-sm text-gray-500 uppercase tracking-wider font-semibold">Order ID</p>
+                            <p className="font-mono text-lg font-bold text-yellow-700 mt-1">{orderId}</p>
+                        </div>
 
-                        }}
-                    />
+                        <div className="flex justify-center mb-8">
+                            <div className="p-4 bg-gray-50 rounded-xl border border-yellow-200">
+                                <img
+                                    src={qrCodeData}
+                                    alt="QRIS Code"
+                                    className="w-48 h-48 object-contain"
+                                    onError={(e) => {
+                                        console.error("Failed to load QR image from URL:", qrCodeData);
+                                    }}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded-r-lg p-4 mb-6">
+                            <p className="font-bold text-yellow-800 mb-2">Instruksi Pembayaran:</p>
+                            <ol className="list-decimal list-inside space-y-1 text-sm text-gray-700 pl-2">
+                                <li>Buka aplikasi e-wallet (OVO, DANA, ShopeePay, dll)</li>
+                                <li>Pilih menu <strong>Scan QR</strong></li>
+                                <li>Arahkan kamera ke kode QR di atas</li>
+                                <li>Ikuti petunjuk untuk menyelesaikan pembayaran</li>
+                            </ol>
+                        </div>
+
+                        <div className="text-center text-xs text-gray-500">
+                            <p>Pembayaran akan otomatis diverifikasi setiap 15 detik.</p>
+                        </div>
+                    </div>
                 </div>
-
-                <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6">
-                    <p className="font-bold">Instruksi Pembayaran:</p>
-                    <ol className="list-decimal list-inside mt-2 space-y-1">
-                        <li>Buka aplikasi pembayaran yang mendukung QRIS (DANA, OVO, ShopeePay, dll).</li>
-                        <li>Pilih menu Scan QR.</li>
-                        <li>Arahkan kamera ke QR Code di atas.</li>
-                        <li>Ikuti instruksi di aplikasi untuk menyelesaikan pembayaran.</li>
-                    </ol>
-                </div>
-
-                <Button
-                    onClick={() => navigate('/transaksi', { state: { orderId } })}
-                    variant="outline"
-                    className="w-full"
-                >
-                    Lihat Status Pembayaran
-                </Button>
             </div>
         </div>
     );

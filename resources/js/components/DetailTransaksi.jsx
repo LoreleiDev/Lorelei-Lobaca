@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { ShoppingCart, Tag, ChevronRight } from "lucide-react";
 import NavbarHome from "./ui/NavbarHome";
 import Loading from "./ui/Loading";
 import Swal from "sweetalert2";
@@ -59,7 +57,7 @@ export default function DetailTransaksiPage() {
                     setTransaksi(data.data.transaksi);
                 } else {
                     Toast.fire({ icon: "error", title: "Gagal memuat transaksi." });
-                    navigate('/keranjang');
+                    navigate('/cart');
                 }
             } catch (error) {
                 Toast.fire({ icon: "error", title: "Kesalahan jaringan." });
@@ -254,15 +252,6 @@ export default function DetailTransaksiPage() {
                                         </p>
                                     </div>
                                 </div>
-                                <Button
-                                    onClick={() => {
-                                        // Redirect ke Midtrans
-                                        window.location.href = `https://app.sandbox.midtrans.com/snap/v3/redirection/${transaksi.snap_token}`;
-                                    }}
-                                    className="w-full mt-6 bg-blue-600 hover:bg-blue-700 py-3 font-medium"
-                                >
-                                    Lanjutkan ke Pembayaran
-                                </Button>
                                 <Link to="/buku" className="block text-center mt-3 text-blue-600 hover:text-blue-800 text-sm">
                                     ← Lanjutkan Belanja
                                 </Link>

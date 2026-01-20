@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Models\Transaksi;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -14,7 +15,7 @@ class NewTransactionMail extends Mailable
 
     public $transaksi;
 
-    public function __construct($transaksi)
+    public function __construct(Transaksi $transaksi)
     {
         $this->transaksi = $transaksi;
     }
@@ -32,4 +33,5 @@ class NewTransactionMail extends Mailable
             view: 'emails.new-transaction',
         );
     }
+    
 }

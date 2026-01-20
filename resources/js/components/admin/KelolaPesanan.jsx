@@ -1,3 +1,4 @@
+// src/pages/admin/PesananPage.jsx
 import { useState, useEffect } from "react";
 import Sidebar from "./ui/Sidebar";
 import Swal from "sweetalert2";
@@ -24,9 +25,7 @@ export default function PesananPage() {
         try {
             const token = localStorage.getItem('admin_token');
             const res = await fetch('/api/admin/orders/pending', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
                 const data = await res.json();
@@ -46,10 +45,7 @@ export default function PesananPage() {
     }, []);
 
     const toggleDetail = (id) => {
-        setShowDetails(prev => ({
-            ...prev,
-            [id]: !prev[id]
-        }));
+        setShowDetails(prev => ({ ...prev, [id]: !prev[id] }));
     };
 
     const handleAction = async (orderId, action) => {
@@ -103,7 +99,6 @@ export default function PesananPage() {
         <Sidebar>
             <div>
                 <h2 className="text-2xl font-bold mb-6">Notifikasi Pesanan Baru</h2>
-
                 {orders.length === 0 ? (
                     <div className="text-gray-500">
                         Tidak ada pesanan yang menunggu konfirmasi.
@@ -126,7 +121,6 @@ export default function PesananPage() {
                                             </div>
                                         )}
                                     </div>
-
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => toggleDetail(order.transaksi_id)}
@@ -134,7 +128,6 @@ export default function PesananPage() {
                                         >
                                             {showDetails[order.transaksi_id] ? 'Sembunyikan' : 'Detail'}
                                         </button>
-
                                         <button
                                             onClick={() => handleAction(order.transaksi_id, 'accept')}
                                             className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"

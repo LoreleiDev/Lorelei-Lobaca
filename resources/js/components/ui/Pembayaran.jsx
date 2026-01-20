@@ -11,7 +11,7 @@ const paymentMethods = [
     },
     {
         id: "gopay",
-        name: "GOPAY",
+        name: "GoPay",
         description: "Bayar cepat dengan GoPay. Mudah dan aman untuk semua transaksi.",
     },
     {
@@ -20,33 +20,28 @@ const paymentMethods = [
         description: "Transaksi mudah dengan DANA. Proses instant tanpa ribet.",
     },
     {
-        id: "shopeepay",
-        name: "SHOPEE PAY",
-        description: "Gunakan ShopeePay untuk pembayaran. Cepat, aman, dan praktis.",
-    },
-    {
         id: "bca_transfer",
-        name: "BCA Transfer",
+        name: "BCA VA",
         description: "Transfer antar rekening BCA.",
     },
     {
         id: "bni_transfer",
-        name: "BNI Transfer",
+        name: "BNI VA",
         description: "Transfer antar rekening BNI.",
     },
     {
         id: "bri_transfer",
-        name: "BRI Transfer",
+        name: "BRI VA",
         description: "Transfer antar rekening BRI.",
     },
     {
         id: "mandiri_transfer",
-        name: "Mandiri Transfer",
+        name: "Mandiri Bill",
         description: "Transfer antar rekening Mandiri.",
     },
     {
         id: "permata_transfer",
-        name: "Permata Transfer",
+        name: "Permata VA",
         description: "Transfer antar rekening Permata.",
     },
 ];
@@ -153,7 +148,6 @@ export default function PaymentSelector() {
                                     key={method.id}
                                     className="transition-all duration-300"
                                     style={{ height: `${ITEM_HEIGHT}px` }}
-                                    // Tambahkan ref ke div
                                     ref={(el) => (itemRefs.current[index] = el)}
                                 >
                                     <button
@@ -176,7 +170,7 @@ export default function PaymentSelector() {
 
                                         <span
                                             className={cn(
-                                                "text-3xl font-bold tracking-wide transition-all duration-300 uppercase",
+                                                "text-3xl font-bold tracking-wide transition-all duration-300",
                                                 isSelected && "text-black scale-105",
                                                 !isSelected && !isBelowSelection && "text-black/70",
                                                 isBelowSelection && "text-[#f4d03f]"

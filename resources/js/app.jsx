@@ -26,6 +26,7 @@ import PaymentSelector from "./components/ui/Pembayaran";
 import AddressCourierSelector from "./components/ui/AlamatKurir";
 import PaymentQris from "./components/PaymentQris";
 import PaymentVa from "./components/PaymentVA";
+import DetailTransaksiPage from "./components/DetailTransaksi";
 
 import AdminLogin from "./components/admin/LoginAdmin";
 import AdminDashboard from "./components/admin/Dashboard";
@@ -59,6 +60,7 @@ ReactDOM.createRoot(document.getElementById("app")).render(
                 <Route path="/alamat-kurir" element={<AddressCourierSelector />} />
                 <Route path="/payment-qris" element={<PaymentQris />} />
                 <Route path="/payment-va" element={<PaymentVa />} />
+                <Route path="/transaksi" element={<DetailTransaksiPage />} />
 
                 {/* === USER PROTECTED ROUTES === */}
                 <Route element={<UserRoute />}>

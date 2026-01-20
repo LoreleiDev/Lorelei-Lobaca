@@ -28,14 +28,18 @@ class CheckoutController extends Controller
         $user = $request->user();
 
         if (!$user) {
+            Log::error('Checkout Error: User not authenticated');
             return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 
-        $cart = Cart::with(['items.buku' => function ($query) {
-            $query->withAvg('reviews', 'rating');
-        }])->where('user_id', $user->id)->first();
+        $cart = Cart::with([
+            'items.buku' => function ($query) {
+                $query->withAvg('reviews', 'rating');
+            }
+        ])->where('user_id', $user->id)->first();
 
         if (!$cart || $cart->items->isEmpty()) {
+            Log::error('Checkout Error: Cart is empty for user ID: ' . $user->id);
             return response()->json([
                 'success' => false,
                 'message' => 'Keranjang kosong.'
@@ -59,6 +63,7 @@ class CheckoutController extends Controller
             $buku = $item->buku;
 
             if ($buku->stok < $item->jumlah) {
+                Log::error('Checkout Error: Insufficient stock for book "' . $buku->judul . '". Available: ' . $buku->stok . ', Requested: ' . $item->jumlah);
                 return response()->json([
                     'success' => false,
                     'message' => "Stok buku '{$buku->judul}' tidak mencukupi. Tersedia: {$buku->stok}, Diminta: {$item->jumlah}."
@@ -70,8 +75,6 @@ class CheckoutController extends Controller
 
             $hargaSatuan = $buku->harga;
             $discountPercent = 0;
-            $hasPromo = false;
-            $promoName = null;
 
             $activePromo = Promo::whereHas('books', function ($q) use ($buku) {
                 $q->where('promo_buku.buku_id', $buku->buku_id);
@@ -98,8 +101,6 @@ class CheckoutController extends Controller
                     $discountPercent = $promoBook->pivot->discount_percent;
                     if (is_numeric($discountPercent) && $discountPercent > 0) {
                         $hargaSatuan = $buku->harga - ($buku->harga * $discountPercent / 100);
-                        $hasPromo = true;
-                        $promoName = $activePromo->name;
                     }
                 }
             }
@@ -109,7 +110,7 @@ class CheckoutController extends Controller
 
             $itemDetailsForMidtrans[] = [
                 'id' => $buku->buku_id,
-                'price' => (int)$hargaSatuan,
+                'price' => (int) $hargaSatuan,
                 'quantity' => $item->jumlah,
                 'name' => $buku->judul,
             ];
@@ -121,7 +122,7 @@ class CheckoutController extends Controller
         if ($ongkir > 0) {
             $itemDetailsForMidtrans[] = [
                 'id' => 'shipping_fee',
-                'price' => (int)$ongkir,
+                'price' => (int) $ongkir,
                 'quantity' => 1,
                 'name' => 'Ongkos Kirim (' . $request->kurir . ')',
             ];
@@ -132,15 +133,12 @@ class CheckoutController extends Controller
         $frontendPaymentMethod = $request->input('payment_method');
 
         $frontendToMidtrans = [
-            'bank_transfer' => 'bank_transfer',
             'bca_transfer' => 'bank_transfer',
             'bni_transfer' => 'bank_transfer',
             'bri_transfer' => 'bank_transfer',
-            'mandiri_transfer' => 'bank_transfer',
-            'permata_transfer' => 'bank_transfer',
-            'credit_card' => 'credit_card',
+            'mandiri_transfer' => 'echannel',
+            'permata_transfer' => 'permata',
             'gopay' => 'gopay',
-            'shopeepay' => 'shopeepay',
             'dana' => 'qris',
             'ovo' => 'qris',
         ];
@@ -148,6 +146,7 @@ class CheckoutController extends Controller
         $midtransPaymentType = $frontendToMidtrans[$frontendPaymentMethod] ?? null;
 
         if (!$midtransPaymentType) {
+            Log::error('Checkout Error: Unsupported payment method: ' . $frontendPaymentMethod);
             return response()->json([
                 'success' => false,
                 'message' => 'Metode pembayaran tidak didukung.'
@@ -178,27 +177,7 @@ class CheckoutController extends Controller
             'country_code' => 'IDN',
         ];
 
-        Log::info('Checkout Debug - User Data:', [
-            'user_id' => $user->id,
-            'first_name' => $user->first_name,
-            'last_name' => $user->last_name,
-            'email' => $user->email,
-            'phone' => $user->phone,
-        ]);
-
-        Log::info('Checkout Debug - Request Data:', [
-            'alamat_pengiriman' => $request->alamat_pengiriman,
-            'kurir' => $request->kurir,
-            'ongkir' => $request->ongkir,
-            'payment_method' => $frontendPaymentMethod,
-        ]);
-
-        Log::info('Checkout Debug - Customer Details for Midtrans:', $customerDetails);
-        Log::info('Checkout Debug - Shipping Address for Midtrans:', $shippingAddress);
-        Log::info('Checkout Debug - Item Details for Midtrans:', $itemDetailsForMidtrans);
-
         $payload = [
-            'payment_type' => $midtransPaymentType,
             'transaction_details' => [
                 'order_id' => $orderId,
                 'gross_amount' => $totalAkhir,
@@ -209,32 +188,41 @@ class CheckoutController extends Controller
 
         $payload['customer_details']['shipping_address'] = $shippingAddress;
 
-        $bankMapping = [
-            'bca_transfer' => 'bca',
-            'bni_transfer' => 'bni',
-            'bri_transfer' => 'bri',
-            'mandiri_transfer' => 'mandiri',
-            'permata_transfer' => 'permata',
-        ];
-
-        $targetBank = $bankMapping[$frontendPaymentMethod] ?? null;
-
         switch ($frontendPaymentMethod) {
             case 'bca_transfer':
             case 'bni_transfer':
             case 'bri_transfer':
+                $payload['payment_type'] = 'bank_transfer';
+                $bankMapping = [
+                    'bca_transfer' => 'bca',
+                    'bni_transfer' => 'bni',
+                    'bri_transfer' => 'bri',
+                ];
+                $payload['bank_transfer'] = ['bank' => $bankMapping[$frontendPaymentMethod]];
+                break;
+
             case 'mandiri_transfer':
-            case 'permata_transfer':
-                $payload['bank_transfer'] = [
-                    'bank' => $targetBank
+                $payload['payment_type'] = 'echannel';
+                $payload['echannel'] = [
+                    'bill_info1' => 'Pembayaran Buku',
+                    'bill_info2' => 'Lobaca Online Store'
                 ];
                 break;
+
+            case 'permata_transfer':
+                $payload['payment_type'] = 'bank_transfer';
+                $payload['bank_transfer'] = [
+                    'bank' => 'permata'
+                ];
+                break;
+
             case 'gopay':
+                $payload['payment_type'] = 'gopay';
                 break;
-            case 'shopeepay':
-                break;
+
             case 'dana':
             case 'ovo':
+                $payload['payment_type'] = 'qris';
                 break;
         }
 
@@ -245,8 +233,6 @@ class CheckoutController extends Controller
         }
 
         $encodedServerKey = base64_encode($serverKey . ':');
-
-        Log::info('Checkout Debug - Final Payload to Midtrans:', $payload);
 
         try {
             $response = Http::withHeaders([
@@ -262,7 +248,6 @@ class CheckoutController extends Controller
                     'success' => false,
                     'message' => 'Gagal menginisiasi pembayaran.',
                     'error' => $responseData['message'] ?? 'Unknown error',
-                    'raw_error' => $response->body()
                 ], $response->status());
             }
 
@@ -306,7 +291,7 @@ class CheckoutController extends Controller
             'kurir' => $request->kurir,
             'ongkir' => $ongkir,
             'status_transaksi' => $mappedStatus,
-            'transaction_id_midtrans' => $midtransTransactionId,
+            'transaction_id_midtrans' => $orderId,
             'midtrans_response' => json_encode($midtransResponse),
         ]);
 
@@ -315,8 +300,6 @@ class CheckoutController extends Controller
 
             $hargaSatuanFinal = $buku->harga;
             $discountPercentFinal = 0;
-            $hasPromoFinal = false;
-            $promoNameFinal = null;
 
             $activePromo = Promo::whereHas('books', function ($q) use ($buku) {
                 $q->where('promo_buku.buku_id', $buku->buku_id);
@@ -343,8 +326,6 @@ class CheckoutController extends Controller
                     $discountPercentFinal = $promoBook->pivot->discount_percent;
                     if (is_numeric($discountPercentFinal) && $discountPercentFinal > 0) {
                         $hargaSatuanFinal = $buku->harga - ($buku->harga * $discountPercentFinal / 100);
-                        $hasPromoFinal = true;
-                        $promoNameFinal = $activePromo->name;
                     }
                 }
             }
@@ -357,10 +338,14 @@ class CheckoutController extends Controller
             ]);
         }
 
-        // Kirim notifikasi ke admin
         $admins = Admin::all();
         foreach ($admins as $admin) {
-            Mail::to($admin->email)->send(new NewTransactionMail($transaksi));
+            try {
+                Mail::to($admin->email)->send(new NewTransactionMail($transaksi));
+                Log::info('Email notification sent to: ' . $admin->email);
+            } catch (\Exception $e) {
+                Log::error('Failed to send email to ' . $admin->email . ': ' . $e->getMessage());
+            }
         }
 
         return response()->json([
@@ -376,6 +361,7 @@ class CheckoutController extends Controller
         $notification = json_decode($notificationJson);
 
         if (!$notification) {
+            Log::error('Webhook Error: Invalid JSON payload');
             return response('Bad Request', 400);
         }
 
@@ -383,10 +369,12 @@ class CheckoutController extends Controller
         $transactionStatus = $notification->transaction_status;
         $fraudStatus = $notification->fraud_status ?? 'accept';
 
+        Log::info('Webhook Received - Order ID: ' . $orderId . ', Status: ' . $transactionStatus);
+
         $transaksi = Transaksi::where('transaction_id_midtrans', $orderId)->first();
 
         if (!$transaksi) {
-            Log::warning('Transaksi tidak ditemukan untuk order_id: ' . $orderId);
+            Log::warning('Webhook Error: Transaksi tidak ditemukan untuk order_id: ' . $orderId);
             return response('Order ID not found', 404);
         }
 
@@ -422,6 +410,8 @@ class CheckoutController extends Controller
                 break;
         }
 
+        Log::info('Webhook Processed - Order ID: ' . $orderId . ' updated to status: ' . $mappedStatus);
+
         return response('Notification received', 200);
     }
 
@@ -433,6 +423,7 @@ class CheckoutController extends Controller
                 $buku = Buku::find($detail->buku_id);
                 if ($buku) {
                     $buku->decrement('stok', $detail->jumlah);
+                    Log::info('Stock reduced for book ID: ' . $detail->buku_id . ', Quantity: ' . $detail->jumlah);
                 }
             }
         }

@@ -46,7 +46,6 @@ const paymentMethodLabels = {
     "ovo": "OVO",
     "gopay": "GoPay",
     "dana": "DANA",
-    "shopeepay": "Shopee Pay",
     "bca_transfer": "BCA Transfer",
     "bni_transfer": "BNI Transfer",
     "bri_transfer": "BRI Transfer",
@@ -240,72 +239,89 @@ export default function KeranjangPage() {
                 })
             });
 
-            // --- BACA RESPON HANYA SEKALI ---
-            const responseText = await res.text();
             let data;
             try {
-                data = JSON.parse(responseText);
+                data = await res.json();
             } catch (e) {
                 console.error("Failed to parse JSON response:", e);
-                console.error("Raw response was:", responseText);
                 Toast.fire({ icon: "error", title: "Respon dari server tidak valid." });
                 return;
             }
-            console.log("Parsed response ", data);
-            // --- END BACA RESPON ---
 
             if (res.ok) {
-                console.log("Response OK, checking for redirect, VA, or QR Code...");
                 const midtransResponse = data.data;
 
-                // Cek redirect_url (untuk halaman pembayaran Midtrans)
+                if (midtransResponse.expiry_time) {
+                    localStorage.setItem('payment_expiry', midtransResponse.expiry_time);
+                }
                 if (midtransResponse.redirect_url) {
-                    console.log("Redirecting to Midtrans page:", midtransResponse.redirect_url);
                     window.location.href = midtransResponse.redirect_url;
-                    return; // Stop execution here if redirecting
+                    return;
                 }
 
-                // Cek apakah ini Virtual Account (VA)
-                const vaNumbers = midtransResponse.va_numbers;
-                const paymentType = midtransResponse.payment_type;
-                const grossAmount = midtransResponse.gross_amount;
                 const orderId = midtransResponse.order_id;
+                const grossAmount = parseFloat(midtransResponse.gross_amount);
 
-                if (paymentType === 'bank_transfer' && vaNumbers && vaNumbers.length > 0) {
-                    console.log("Virtual Account detected:", vaNumbers);
-                    // Navigate to PaymentVa page with VA details
+                // 1. Handle PERMATA: kirim ke /payment-va dengan format VA
+                if (paymentMethodFromLS === 'permata_transfer' && midtransResponse.permata_va_number) {
                     navigate('/payment-va', {
                         state: {
-                            vaNumbers,
+                            vaNumbers: [{ va_number: midtransResponse.permata_va_number }],
                             orderId,
-                            grossAmount: parseFloat(grossAmount),
-                            paymentMethod: paymentMethodFromLS // Kirim metode pembayaran asli
+                            grossAmount,
+                            paymentMethod: paymentMethodFromLS
                         }
                     });
-                    return; // Stop execution here if navigating to VA page
+                    return;
                 }
 
-                // Cek apakah ini QRIS
+                // 2. Handle MANDIRI (echannel): kirim ke /payment-va dengan Bill Key sebagai VA
+                if (midtransResponse.payment_type === 'echannel' && midtransResponse.bill_key && midtransResponse.biller_code) {
+                    navigate('/payment-va', {
+                        state: {
+                            vaNumbers: [],
+                            orderId: midtransResponse.order_id,
+                            grossAmount: parseFloat(midtransResponse.gross_amount),
+                            paymentMethod: paymentMethodFromLS,
+                            billKey: midtransResponse.bill_key,
+                            billerCode: midtransResponse.biller_code,
+                        }
+                    });
+                    return;
+                }
+
+                // 3. Handle BANK TRANSFER (BCA, BNI, BRI)
+                if (midtransResponse.payment_type === 'bank_transfer' && midtransResponse.va_numbers?.length > 0) {
+                    navigate('/payment-va', {
+                        state: {
+                            vaNumbers: midtransResponse.va_numbers,
+                            orderId,
+                            grossAmount,
+                            paymentMethod: paymentMethodFromLS
+                        }
+                    });
+                    return;
+                }
+
+                // 4. Handle QRIS (OVO, DANA)
                 let qrCodeData = null;
-                if (midtransResponse.actions && Array.isArray(midtransResponse.actions)) {
+                if (midtransResponse.actions?.length) {
                     const qrisAction = midtransResponse.actions.find(action => action.name === 'generate-qr-code');
-                    if (qrisAction && qrisAction.url) {
+                    if (qrisAction?.url) {
                         qrCodeData = qrisAction.url;
                     }
                 }
-
                 if (qrCodeData) {
-                    console.log("QRIS detected, navigating to Qris page");
                     navigate('/payment-qris', { state: { qrCodeData, orderId } });
-                    return; // Stop execution here if navigating to Qris page
+                    return;
                 }
 
-                // Jika tidak ada redirect_url, VA, atau QRIS, mungkin untuk CC atau metode lain
-                console.log("No specific action found, showing generic message.");
-                Toast.fire({ icon: "info", title: `Silakan selesaikan pembayaran untuk ${paymentType || 'metode pembayaran'}.` });
-
+                // Fallback
+                Toast.fire({
+                    icon: "info",
+                    title: `Silakan selesaikan pembayaran untuk ${midtransResponse.payment_type || 'metode pembayaran'}.`
+                });
             } else {
-                // Gunakan data.error dari respons JSON yang sudah diparse
                 Toast.fire({
                     icon: "error",
                     title: data.message || "Gagal checkout.",

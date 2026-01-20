@@ -18,71 +18,96 @@ const Toast = Swal.mixin({
 export default function PaymentVa() {
     const location = useLocation();
     const navigate = useNavigate();
-    const { vaNumbers, orderId, grossAmount, paymentMethod } = location.state || {};
+    const { vaNumbers, orderId, grossAmount, paymentMethod, billKey, billerCode } = location.state || {};
 
-    console.log("PaymentVa - Location State:", location.state);
-
-    const [countdown, setCountdown] = useState(15 * 60); 
-    const [status, setStatus] = useState('pending'); 
-
+    const [paymentStatus, setPaymentStatus] = useState('pending');
 
     useEffect(() => {
-        if (!vaNumbers || !orderId || !paymentMethod) {
-            console.error("PaymentVa - Missing required data in state.");
-            Toast.fire({ icon: "error", title: "Data pembayaran tidak valid." });
-            navigate('/cart', { replace: true });
-            return;
-        }
+        if (!orderId) return;
 
-        let timer;
-        if (countdown > 0 && status === 'pending') {
-            timer = setInterval(() => {
-                setCountdown(prev => {
-                    if (prev <= 1) {
-                        setStatus('failed'); 
-                        return 0;
-                    }
-                    return prev - 1;
+        const pollStatus = async () => {
+            try {
+                const token = localStorage.getItem('user_token');
+                const res = await fetch(`/api/transaction/${orderId}/status`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
-            }, 1000);
-        }
 
-        return () => {
-            if (timer) clearInterval(timer);
+                if (res.ok) {
+                    const data = await res.json();
+                    const status = data.data.status_transaksi;
+
+                    if (status === 'transaksi-sukses' || status === 'transaksi-diterima') {
+                        setPaymentStatus('success');
+                    } else if (status === 'transaksi-kadaluarsa' || status === 'transaksi-ditolak') {
+                        setPaymentStatus('failed');
+                    }
+                }
+            } catch (error) {
+                console.error("Polling error:", error);
+            }
         };
-    }, [orderId, navigate, countdown, status]);
 
-    if (!vaNumbers || !orderId || !paymentMethod) {
+        const intervalId = setInterval(pollStatus, 15000); // Polling setiap 15 detik
+        pollStatus(); // Panggil sekali saat mount
+        return () => clearInterval(intervalId);
+    }, [orderId]);
+
+    // Tambahkan kondisi early return jika orderId tidak valid
+    if (!orderId || !paymentMethod) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-100">
-                <p className="text-gray-600">Memuat...</p>
+            <div className="min-h-screen flex items-center justify-center bg-yellow-50">
+                <p className="text-yellow-800 text-lg font-medium">Memuat...</p>
             </div>
         );
     }
 
-    const minutes = Math.floor(countdown / 60);
-    const seconds = countdown % 60;
+    // Fungsi untuk menentukan nama bank
+    const getBankName = () => {
+        if (paymentMethod.includes('bca')) return 'BCA';
+        if (paymentMethod.includes('bni')) return 'BNI';
+        if (paymentMethod.includes('bri')) return 'BRI';
+        if (paymentMethod.includes('mandiri')) return 'Mandiri';
+        if (paymentMethod.includes('permata')) return 'Permata';
+        return 'Bank';
+    };
 
-    const bankName = paymentMethod.replace('_va', '').toUpperCase(); 
-    const vaNumber = Array.isArray(vaNumbers) ? vaNumbers[0]?.va_number : vaNumbers;
+    const bankName = getBankName();
+    const isMandiriBill = paymentMethod.includes('mandiri') && billKey && billerCode;
+    const isPermata = paymentMethod.includes('permata');
 
-    if (status === 'success') {
+    // Ambil nomor VA
+    let vaNumber = '';
+    if (isMandiriBill) {
+        vaNumber = `${billerCode}${billKey}`;
+    } else if (isPermata && Array.isArray(vaNumbers) && vaNumbers[0]?.va_number) {
+        vaNumber = vaNumbers[0].va_number;
+    } else if (Array.isArray(vaNumbers) && vaNumbers[0]?.va_number) {
+        vaNumber = vaNumbers[0].va_number;
+    } else if (typeof vaNumbers === 'string') {
+        vaNumber = vaNumbers;
+    }
+
+
+    // SUCCESS SCREEN
+    if (paymentStatus === 'success') {
         return (
-            <div className="min-h-screen bg-green-50 py-8">
-                <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
-                    <div className="text-center">
-                        <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            <div className="min-h-screen bg-linear-to-b from-yellow-50 to-yellow-100 py-8 px-4">
+                <div className="max-w-md mx-auto">
+                    <div className="bg-white rounded-2xl shadow-xl p-8 text-center border-2 border-yellow-300">
+                        <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                             </svg>
                         </div>
-                        <h2 className="text-2xl font-bold text-green-600">Pembayaran Berhasil!</h2>
-                        <p className="text-gray-600 mt-2">Terima kasih, pembayaran untuk order {orderId} telah diterima.</p>
+                        <h2 className="text-2xl font-bold text-gray-800 mb-2">Pembayaran Berhasil!</h2>
+                        <p className="text-gray-600 mb-6">
+                            Terima kasih! Pembayaran untuk pesanan <span className="font-mono font-bold text-yellow-700"><br />{orderId} <br /></span> telah diterima.
+                        </p>
                         <Button
-                            onClick={() => navigate('/transaksi', { state: { orderId } })}
-                            className="mt-6 bg-green-600 hover:bg-green-700 w-full"
+                            onClick={() => navigate('/transaksi')}
+                            className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
                         >
-                            Lihat Status Transaksi
+                            Lihat Detail Transaksi
                         </Button>
                     </div>
                 </div>
@@ -90,21 +115,24 @@ export default function PaymentVa() {
         );
     }
 
-    if (status === 'failed') {
+    // FAILED SCREEN
+    if (paymentStatus === 'failed') {
         return (
-            <div className="min-h-screen bg-red-50 py-8">
-                <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
-                    <div className="text-center">
-                        <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <div className="min-h-screen bg-linear-to-b from-yellow-50 to-yellow-100 py-8 px-4">
+                <div className="max-w-md mx-auto">
+                    <div className="bg-white rounded-2xl shadow-xl p-8 text-center border-2 border-yellow-300">
+                        <div className="w-20 h-20 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </div>
-                        <h2 className="text-2xl font-bold text-red-600">Pembayaran Kadaluarsa!</h2>
-                        <p className="text-gray-600 mt-2">Waktu pembayaran untuk order {orderId} telah habis.</p>
+                        <h2 className="text-2xl font-bold text-gray-800 mb-2">Pembayaran Gagal</h2>
+                        <p className="text-gray-600 mb-6">
+                            Waktu pembayaran untuk pesanan <span className="font-mono font-bold text-yellow-700"><br />{orderId} <br /></span> telah habis atau dibatalkan.
+                        </p>
                         <Button
                             onClick={() => navigate('/cart')}
-                            className="mt-6 bg-red-600 hover:bg-red-700 w-full"
+                            className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
                         >
                             Kembali ke Keranjang
                         </Button>
@@ -114,40 +142,77 @@ export default function PaymentVa() {
         );
     }
 
+    // PENDING SCREEN (Default)
     return (
-        <div className="min-h-screen bg-gray-50 py-8">
-            <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-2xl font-bold text-center mb-4">Bayar via Virtual Account</h2>
-                <p className="text-center text-gray-600 mb-2">Order ID: {orderId}</p>
-                <p className="text-center text-gray-600 mb-6">Sisa Waktu: {minutes}:{seconds < 10 ? '0' : ''}{seconds}</p>
+        <div className="min-h-screen bg-linear-to-b from-yellow-50 to-yellow-100 py-8 px-4">
+            <div className="max-w-md mx-auto">
+                <div className="bg-white rounded-2xl shadow-xl overflow-hidden border-2 border-yellow-300">
+                    <div className="bg-yellow-500 py-5 text-center">
+                        <h1 className="text-2xl font-bold text-white tracking-wide">
+                            {isMandiriBill ? 'Bayar via Mandiri Bill' : 'Bayar via Virtual Account'}
+                        </h1>
+                    </div>
 
-                <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6">
-                    <p className="font-bold">Detail Pembayaran:</p>
-                    <div className="mt-2">
-                        <p className="mb-1"><span className="font-semibold">Bank:</span> {bankName}</p>
-                        <p className="mb-1"><span className="font-semibold">Nomor VA:</span> <strong>{vaNumber}</strong></p>
-                        <p><span className="font-semibold">Jumlah:</span> <strong>IDR {new Intl.NumberFormat('id-ID').format(grossAmount)}</strong></p>
+                    <div className="p-6">
+                        <div className="text-center mb-6">
+                            <p className="text-sm text-gray-500 uppercase tracking-wider font-semibold">Order ID</p>
+                            <p className="font-mono text-lg font-bold text-yellow-700 mt-1">{orderId}</p>
+                        </div>
+
+                        <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded-r-lg p-4 mb-6">
+                            <p className="font-bold text-yellow-800 mb-2">Detail Pembayaran:</p>
+                            <div className="text-sm text-gray-700 space-y-1">
+                                <p><span className="font-semibold">Bank:</span> {bankName}</p>
+                                {!isMandiriBill && (
+                                    <p><span className="font-semibold">Nomor VA:</span> <strong>{vaNumber}</strong></p>
+                                )}
+                                {isMandiriBill && (
+                                    <>
+                                        <p><span className="font-semibold">Biller Code:</span> <strong>{billerCode}</strong></p>
+                                        <p><span className="font-semibold">Bill Key:</span> <strong>{billKey}</strong></p>
+                                    </>
+                                )}
+                                <p><span className="font-semibold">Jumlah:</span> <strong>IDR {new Intl.NumberFormat('id-ID').format(grossAmount)}</strong></p>
+                            </div>
+                        </div>
+
+                        <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded-r-lg p-4 mb-6">
+                            <p className="font-bold text-yellow-800 mb-2">Instruksi Pembayaran:</p>
+                            <ol className="list-decimal list-inside space-y-1 text-sm text-gray-700 pl-2">
+                                {isMandiriBill ? (
+                                    <>
+                                        <li>Buka aplikasi mobile banking Mandiri atau kunjungi ATM Mandiri.</li>
+                                        <li>Pilih menu <strong>Bayar</strong> → <strong>Lainnya</strong> → <strong>Mandiri Bill</strong>.</li>
+                                        <li>Masukkan <strong>Biller Code ({billerCode})</strong> dan <strong>Bill Key ({billKey})</strong>.</li>
+                                        <li>Periksa detail pembayaran dan konfirmasi.</li>
+                                    </>
+                                ) : (
+                                    <>
+                                        <li>Buka aplikasi mobile banking atau ATM dari bank {bankName}.</li>
+                                        <li>Pilih menu <strong>Transfer</strong>.</li>
+                                        <li>Masukkan <strong>Nomor VA ({vaNumber})</strong> sebagai nomor rekening tujuan.</li>
+                                        <li>Masukkan <strong>Jumlah Pembayaran (IDR {new Intl.NumberFormat('id-ID').format(grossAmount)})</strong> secara <strong>eksak</strong>.</li>
+                                        <li>Lanjutkan proses transfer hingga selesai.</li>
+                                    </>
+                                )}
+                            </ol>
+                        </div>
+
+                        {isMandiriBill && (
+                            <div className="bg-blue-50 border-l-4 border-blue-500 rounded-r-lg p-4 mb-6">
+                                <p className="font-bold text-blue-800 mb-2">Informasi Mandiri Bill:</p>
+                                <div className="text-sm text-gray-700 space-y-1">
+                                    <p><span className="font-semibold">Bill Key:</span> <strong>{billKey}</strong></p>
+                                    <p><span className="font-semibold">Biller Code:</span> <strong>{billerCode}</strong></p>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="text-center text-xs text-gray-500">
+                            <p>Pembayaran akan otomatis diverifikasi setiap 15 detik.</p>
+                        </div>
                     </div>
                 </div>
-
-                <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6">
-                    <p className="font-bold">Instruksi Pembayaran:</p>
-                    <ol className="list-decimal list-inside mt-2 space-y-1">
-                        <li>Buka aplikasi mobile banking atau ATM dari bank {bankName}.</li>
-                        <li>Pilih menu <strong>Transfer</strong>.</li>
-                        <li>Masukkan <strong>Nomor VA ({vaNumber})</strong> sebagai nomor rekening tujuan.</li>
-                        <li>Masukkan <strong>Jumlah Pembayaran (IDR {new Intl.NumberFormat('id-ID').format(grossAmount)})</strong> secara <strong>eksak</strong>.</li>
-                        <li>Lanjutkan proses transfer hingga selesai.</li>
-                    </ol>
-                </div>
-
-                <Button
-                    onClick={() => navigate('/transaksi', { state: { orderId } })}
-                    variant="outline"
-                    className="w-full"
-                >
-                    Lihat Status Pembayaran
-                </Button>
             </div>
         </div>
     );

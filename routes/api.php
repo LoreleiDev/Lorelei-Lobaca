@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\BookPublicController;
 use App\Http\Controllers\Api\RajaongkirController;
 use App\Http\Controllers\Api\Admin\PromoController;
 use App\Http\Controllers\Api\PromoPublicController;
+use App\Http\Controllers\Api\TransactionStatusController;
 
 /*
 |--------------------------------------------------------------------------
@@ -77,12 +78,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/rajaongkir/districts/{cityId}', [RajaongkirController::class, 'getDistricts']);
     Route::get('/rajaongkir/sub-districts/{districtId}', [RajaongkirController::class, 'getSubDistricts']);
 
+    Route::get('/transaction/{orderId}/status', [TransactionStatusController::class, 'show']);
     Route::get('/transaksi/{id}', [TransaksiController::class, 'show'])->name('transaksi.show');
     Route::get('/transaksi/user', [TransaksiController::class, 'indexForUser'])->name('transaksi.user.index');
     Route::put('/transaksi/{transaksi}/diterima', [TransaksiController::class, 'confirmReceived'])->name('transaksi.confirm_received');
-});
+    
+    });
 
-// --- Checkout Routes ---
 Route::post('/checkout/notification', [CheckoutController::class, 'receiveNotification']);
 
 // --- Rajaongkir Routes ---
@@ -105,6 +107,7 @@ Route::middleware(['api', 'auth:sanctum,admin', 'admin'])->prefix('admin')->grou
     Route::get('/ulasan/book/{bookId}', [App\Http\Controllers\Api\Admin\ReviewController::class, 'showReviewsByBook']);
     Route::post('/ulasan/{reviewId}/to-testimonial', [App\Http\Controllers\Api\Admin\ReviewController::class, 'convertToTestimonial']);
     Route::delete('/ulasan/{reviewId}/remove-testimonial', [App\Http\Controllers\Api\Admin\ReviewController::class, 'removeAsTestimonial']);
-    Route::put('/transaksi/{id}/approve', [App\Http\Controllers\Api\Admin\TransaksiController::class, 'approve']);
-    Route::put('/transaksi/{id}/reject', [App\Http\Controllers\Api\Admin\TransaksiController::class, 'reject']);
+    Route::get('/orders/pending', [TransaksiController::class, 'index']);
+    Route::post('/orders/{id}/accept', [TransaksiController::class, 'approve']);
+    Route::post('/orders/{id}/reject', [TransaksiController::class, 'reject']);
 });
