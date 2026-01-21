@@ -213,6 +213,15 @@ export default function KeranjangPage() {
         const destinationDistrictId = localStorage.getItem('destination_district_id');
         const paymentMethodFromLS = localStorage.getItem('selected_payment_method');
 
+        // --- TAMBAHKAN CONSOLE LOG INI ---
+        console.log("=== DEBUG: Data Checkout ===");
+        console.log("Alamat Lengkap:", alamatLengkap);
+        console.log("Ongkir Value:", ongkirValue);
+        console.log("Kurir Code:", kurirCode);
+        console.log("Destination District ID:", destinationDistrictId);
+        console.log("Payment Method (from LS):", paymentMethodFromLS);
+        console.log("===========================");
+
         if (!alamatLengkap || !ongkirValue || !kurirCode || !destinationDistrictId) {
             Toast.fire({ icon: "error", title: "Lengkapi alamat dan kurir terlebih dahulu." });
             return;

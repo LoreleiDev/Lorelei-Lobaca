@@ -34,6 +34,7 @@ return new class extends Migration {
             $table->text('alamat_pengiriman');
             $table->string('kurir');
             $table->decimal('ongkir', 10, 2);
+            $table->string('payment_method')->nullable();
             $table->enum('status_transaksi', [
                 'transaksi-diproses',
                 'transaksi-sukses',

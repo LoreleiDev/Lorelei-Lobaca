@@ -131,6 +131,7 @@ class CheckoutController extends Controller
         $orderId = 'LOBACA-' . time() . '-' . $user->id;
 
         $frontendPaymentMethod = $request->input('payment_method');
+        Log::info('Payment Method from Request:', ['method' => $frontendPaymentMethod]);
 
         $frontendToMidtrans = [
             'bca_transfer' => 'bank_transfer',
@@ -283,6 +284,19 @@ class CheckoutController extends Controller
         $midtransStatus = $midtransResponse['transaction_status'] ?? 'pending';
         $mappedStatus = $statusMapping[$midtransStatus] ?? 'transaksi-diproses';
 
+        Log::info('Creating Transaction with Data:', [
+            'user_id' => $user->id,
+            'total_harga' => $totalAkhir,
+            'total_berat' => $totalBerat,
+            'alamat_pengiriman' => $request->alamat_pengiriman,
+            'kurir' => $request->kurir,
+            'ongkir' => $ongkir,
+            'status_transaksi' => $mappedStatus,
+            'transaction_id_midtrans' => $orderId,
+            'midtrans_response' => json_encode($midtransResponse),
+            'payment_method' => $frontendPaymentMethod,
+        ]);
+
         $transaksi = Transaksi::create([
             'user_id' => $user->id,
             'total_harga' => $totalAkhir,
@@ -293,6 +307,7 @@ class CheckoutController extends Controller
             'status_transaksi' => $mappedStatus,
             'transaction_id_midtrans' => $orderId,
             'midtrans_response' => json_encode($midtransResponse),
+            'payment_method' => $frontendPaymentMethod,
         ]);
 
         foreach ($cart->items as $item) {

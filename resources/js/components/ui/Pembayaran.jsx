@@ -80,7 +80,7 @@ export default function PaymentSelector() {
                 if (itemRefs.current[newIndex]) {
                     itemRefs.current[newIndex].scrollIntoView({
                         behavior: 'smooth',
-                        block: 'center', // Pusatkan item di tengah viewport
+                        block: 'center',
                     });
                 }
 
@@ -105,7 +105,7 @@ export default function PaymentSelector() {
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [confirmed, selectedIndex]); // Tambahkan selectedIndex ke dependency
+    }, [confirmed, selectedIndex]); 
 
     const handleConfirm = () => {
         setConfirmed(true);

@@ -28,6 +28,7 @@ class Transaksi extends Model
         'resi_pengiriman',
         'tanggal_dikirim',
         'tanggal_diterima',
+        'payment_method',
     ];
 
     protected $casts = [
