@@ -31,14 +31,27 @@ export default function PaymentVa() {
                 const res = await fetch(`/api/transaction/${orderId}/status`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-
                 if (res.ok) {
                     const data = await res.json();
                     const status = data.data.status_transaksi;
+                    const adminAction = data.data.admin_action_status; 
 
+                    // Prioritas 1: Jika admin tolak → gagal
+                    if (adminAction === 'rejected') {
+                        setPaymentStatus('failed');
+                        return;
+                    }
+
+                    // Prioritas 2: Cek status transaksi
                     if (status === 'transaksi-sukses' || status === 'transaksi-diterima') {
                         setPaymentStatus('success');
-                    } else if (status === 'transaksi-kadaluarsa' || status === 'transaksi-ditolak') {
+                    }
+                    // Tambahkan 'transaksi-dibatalkan' ke daftar status gagal
+                    else if (
+                        status === 'transaksi-kadaluarsa' ||
+                        status === 'transaksi-ditolak' ||
+                        status === 'transaksi-dibatalkan' // ⬅️ TAMBAHKAN INI
+                    ) {
                         setPaymentStatus('failed');
                     }
                 }
@@ -46,8 +59,7 @@ export default function PaymentVa() {
                 console.error("Polling error:", error);
             }
         };
-
-        const intervalId = setInterval(pollStatus, 15000); // Polling setiap 15 detik
+        const intervalId = setInterval(pollStatus, 5000); // Polling setiap 15 detik
         pollStatus(); // Panggil sekali saat mount
         return () => clearInterval(intervalId);
     }, [orderId]);

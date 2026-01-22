@@ -11,15 +11,12 @@ use App\Models\CartItem;
 use App\Models\Promo;
 use App\Models\Transaksi;
 use App\Models\TransaksiDetail;
-use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
 
 class CheckoutController extends Controller
 {
@@ -284,19 +281,7 @@ class CheckoutController extends Controller
         $midtransStatus = $midtransResponse['transaction_status'] ?? 'pending';
         $mappedStatus = $statusMapping[$midtransStatus] ?? 'transaksi-diproses';
 
-        Log::info('Creating Transaction with Data:', [
-            'user_id' => $user->id,
-            'total_harga' => $totalAkhir,
-            'total_berat' => $totalBerat,
-            'alamat_pengiriman' => $request->alamat_pengiriman,
-            'kurir' => $request->kurir,
-            'ongkir' => $ongkir,
-            'status_transaksi' => $mappedStatus,
-            'transaction_id_midtrans' => $orderId,
-            'midtrans_response' => json_encode($midtransResponse),
-            'payment_method' => $frontendPaymentMethod,
-        ]);
-
+        // ✅ Buat transaksi dengan admin_action_status = 'pending'
         $transaksi = Transaksi::create([
             'user_id' => $user->id,
             'total_harga' => $totalAkhir,
@@ -305,6 +290,7 @@ class CheckoutController extends Controller
             'kurir' => $request->kurir,
             'ongkir' => $ongkir,
             'status_transaksi' => $mappedStatus,
+            'admin_action_status' => 'pending', // ⬅️ PENTING
             'transaction_id_midtrans' => $orderId,
             'midtrans_response' => json_encode($midtransResponse),
             'payment_method' => $frontendPaymentMethod,
@@ -353,6 +339,11 @@ class CheckoutController extends Controller
             ]);
         }
 
+        // ✅ KOSONGKAN CART SETELAH CHECKOUT BERHASIL
+        CartItem::where('cart_id', $cart->cart_id)->delete();
+        $cart->delete();
+        Log::info('Cart cleared after successful checkout', ['user_id' => $user->id]);
+
         $admins = Admin::all();
         foreach ($admins as $admin) {
             try {
@@ -370,6 +361,7 @@ class CheckoutController extends Controller
         ], 201);
     }
 
+    // Webhook hanya update status_transaksi, TIDAK KURANGI STOK
     public function receiveNotification(Request $request)
     {
         $notificationJson = $request->getContent();
@@ -404,43 +396,10 @@ class CheckoutController extends Controller
 
         $mappedStatus = $statusMapping[$transactionStatus] ?? 'transaksi-diproses';
 
-        switch ($transactionStatus) {
-            case 'capture':
-            case 'settlement':
-                if ($fraudStatus === 'challenge' || $fraudStatus === 'accept') {
-                    $transaksi->update(['status_transaksi' => $mappedStatus]);
-
-                    if ($fraudStatus === 'accept') {
-                        $this->reduceStock($transaksi->transaksi_id);
-                    }
-                }
-                break;
-            case 'cancel':
-            case 'expire':
-            case 'deny':
-                $transaksi->update(['status_transaksi' => $mappedStatus]);
-                break;
-            case 'pending':
-                $transaksi->update(['status_transaksi' => $mappedStatus]);
-                break;
-        }
+        // ⚠️ HANYA UPDATE STATUS_TRANSAKSI, JANGAN SENTUH STOK!
+        $transaksi->update(['status_transaksi' => $mappedStatus]);
 
         Log::info('Webhook Processed - Order ID: ' . $orderId . ' updated to status: ' . $mappedStatus);
-
         return response('Notification received', 200);
-    }
-
-    private function reduceStock($transaksiId)
-    {
-        $details = TransaksiDetail::where('transaksi_id', $transaksiId)->get();
-        foreach ($details as $detail) {
-            if ($detail->buku_id) {
-                $buku = Buku::find($detail->buku_id);
-                if ($buku) {
-                    $buku->decrement('stok', $detail->jumlah);
-                    Log::info('Stock reduced for book ID: ' . $detail->buku_id . ', Quantity: ' . $detail->jumlah);
-                }
-            }
-        }
     }
 }

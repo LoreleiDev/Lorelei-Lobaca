@@ -25,6 +25,7 @@ class TransactionStatusController extends Controller
             'data' => [
                 'order_id' => $transaksi->transaction_id_midtrans,
                 'status_transaksi' => $transaksi->status_transaksi,
+                'admin_action_status' => $transaksi->admin_action_status,
             ]
         ]);
     }

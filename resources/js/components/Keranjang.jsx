@@ -46,12 +46,11 @@ const paymentMethodLabels = {
     "ovo": "OVO",
     "gopay": "GoPay",
     "dana": "DANA",
-    "bca_transfer": "BCA Transfer",
-    "bni_transfer": "BNI Transfer",
-    "bri_transfer": "BRI Transfer",
-    "mandiri_transfer": "Mandiri Transfer",
-    "permata_transfer": "Permata Transfer",
-    "bank-transfer": "Transfer Bank"
+    "bca_transfer": "BCA VA",
+    "bni_transfer": "BNI VA",
+    "bri_transfer": "BRI VA",
+    "mandiri_transfer": "Mandiri Bill",
+    "permata_transfer": "Permata VA",
 };
 
 const formatCourierName = (name) => {

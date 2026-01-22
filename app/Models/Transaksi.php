@@ -25,6 +25,7 @@ class Transaksi extends Model
         'transaction_id_midtrans',
         'admin_action_status',
         'admin_id_proses',
+        'admin_id_proses',
         'resi_pengiriman',
         'tanggal_dikirim',
         'tanggal_diterima',

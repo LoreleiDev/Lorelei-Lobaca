@@ -70,19 +70,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/reviews', [ReviewController::class, 'store']);
     Route::put('/reviews/{id}', [ReviewController::class, 'update']);
     Route::get('/books/{bookId}/reviews', [ReviewController::class, 'index']);
-    // Checkout 
+    // --- Checkout ---
     Route::post('/checkout/process-payment', [CheckoutController::class, 'processPayment']);
-    // Transaksi 
+    // --- Transaksi ---
     Route::get('/rajaongkir/provinces', [RajaongkirController::class, 'getProvinces']);
     Route::get('/rajaongkir/cities/{provinceId}', [RajaongkirController::class, 'getCities']);
     Route::get('/rajaongkir/districts/{cityId}', [RajaongkirController::class, 'getDistricts']);
     Route::get('/rajaongkir/sub-districts/{districtId}', [RajaongkirController::class, 'getSubDistricts']);
-
+    // --- Status Transaksi ---
     Route::get('/transaction/{orderId}/status', [TransactionStatusController::class, 'show']);
-    Route::get('/transaksi/{id}', [TransaksiController::class, 'show'])->name('transaksi.show');
-    Route::get('/transaksi/user', [TransaksiController::class, 'indexForUser'])->name('transaksi.user.index');
-    Route::put('/transaksi/{transaksi}/diterima', [TransaksiController::class, 'confirmReceived'])->name('transaksi.confirm_received');
-    
     });
 
 Route::post('/checkout/notification', [CheckoutController::class, 'receiveNotification']);

@@ -15,7 +15,7 @@ class TransaksiController extends Controller
     {
         Log::info('Admin Orders Index Called', ['query_params' => $request->all()]);
 
-        $query = Transaksi::with(['user', 'transaksiDetail.buku']);
+        $query = Transaksi::with(['user:id,first_name,last_name,email', 'transaksiDetail.buku']);
 
         $status = $request->query('status');
         if ($status) {
@@ -51,12 +51,19 @@ class TransaksiController extends Controller
             }
         }
 
-        $transaksi = $query->orderBy('created_at', 'desc')->get();
-        Log::info('Orders retrieved', ['count' => $transaksi->count()]);
+        $transaksi = $query->orderBy('created_at', 'desc')->get()->map(function ($t) {
+            if ($t->user) {
+                $t->user->name = trim($t->user->first_name . ' ' . $t->user->last_name);
+            }
+            return $t;
+        });
+
+        $totalPendapatan = $transaksi->where('admin_action_status', 'approved')->sum('total_harga');
 
         return response()->json([
             'success' => true,
-            'data' => $transaksi
+            'data' => $transaksi,
+            'total_pendapatan' => $totalPendapatan
         ]);
     }
 
@@ -131,11 +138,13 @@ class TransaksiController extends Controller
         $admin = $request->user('admin');
         if (!$admin) {
             Log::error('Admin not authenticated');
-            return response()->json(['success' => false, 'message' => 'Admin tidak terotentikasi'], 401);
+            return response()->json([
+                'success' => false,
+                'message' => 'Admin tidak terotentikasi'
+            ], 401);
         }
 
-        $transaksi = Transaksi::with(['transaksiDetail.buku'])->findOrFail($id);
-        Log::info('Order found', ['status' => $transaksi->admin_action_status]);
+        $transaksi = Transaksi::with(['transaksiDetail.buku', 'user'])->findOrFail($id);
 
         if ($transaksi->admin_action_status !== 'pending') {
             Log::warning('Order already processed', ['current_status' => $transaksi->admin_action_status]);
@@ -147,24 +156,45 @@ class TransaksiController extends Controller
 
         DB::beginTransaction();
         try {
-            $midtransStatus = $this->getMidtransStatus($transaksi->transaction_id_midtrans);
-            Log::info('Midtrans status check before reject', ['status' => $midtransStatus, 'transaction_id' => $transaksi->transaction_id_midtrans]);
+            // Daftar metode pembayaran VA (tidak perlu cancel/refund via Midtrans)
+            $vaMethods = [
+                'bca_transfer',
+                'bni_transfer',
+                'bri_transfer',
+                'mandiri_transfer',
+                'permata_transfer'
+            ];
 
-            if (in_array($midtransStatus, ['pending', 'expire'])) {
-                Log::info('Attempting to cancel Midtrans transaction');
-                $this->cancelMidtrans($transaksi->transaction_id_midtrans);
+            $isVa = in_array($transaksi->payment_method, $vaMethods);
+
+            // Hanya panggil cancel Midtrans jika BUKAN VA dan status masih pending/expire
+            if (!$isVa) {
+                $midtransStatus = $this->getMidtransStatus($transaksi->transaction_id_midtrans);
+                if (in_array($midtransStatus, ['pending', 'expire'])) {
+                    Log::info('Attempting to cancel Midtrans transaction (non-VA)');
+                    $this->cancelMidtrans($transaksi->transaction_id_midtrans);
+                }
             } else {
-                Log::info("Transaksi {$id} sudah settlement/expired, skip cancel Midtrans. Proses refund manual jika diperlukan.");
+                Log::info('Skipping Midtrans cancel for VA payment method: ' . $transaksi->payment_method);
             }
 
+            // Update status transaksi
             $transaksi->update([
                 'admin_action_status' => 'rejected',
                 'admin_id_proses' => $admin->admin_id,
                 'status_transaksi' => 'transaksi-dibatalkan'
             ]);
 
-            Log::info('Restoring stock after rejection');
+            // Kembalikan stok (opsional, tapi aman — biasanya belum dikurangi saat checkout)
             $this->restoreStock($transaksi->transaksi_id);
+
+            // Hapus cart & cart items milik user
+            $cart = \App\Models\Cart::where('user_id', $transaksi->user_id)->first();
+            if ($cart) {
+                \App\Models\CartItem::where('cart_id', $cart->cart_id)->delete();
+                $cart->delete();
+                Log::info('Cart cleared after rejection', ['user_id' => $transaksi->user_id]);
+            }
 
             DB::commit();
             Log::info('Transaction rejected successfully', ['order_id' => $id]);
@@ -401,7 +431,7 @@ class TransaksiController extends Controller
 
         $payload = [
             'refund_key' => uniqid('refund_', true),
-            'amount' => (int)$amount,
+            'amount' => (int) $amount,
             'reason' => $reason
         ];
 

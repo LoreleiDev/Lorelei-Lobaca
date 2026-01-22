@@ -31,10 +31,16 @@ export default function PaymentQris() {
                 const res = await fetch(`/api/transaction/${orderId}/status`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-
                 if (res.ok) {
                     const data = await res.json();
                     const status = data.data.status_transaksi;
+                    const adminAction = data.data.admin_action_status;
+
+                    // Jika admin tolak → gagal
+                    if (adminAction === 'rejected') {
+                        setPaymentStatus('failed');
+                        return;
+                    }
 
                     if (status === 'transaksi-sukses' || status === 'transaksi-diterima') {
                         setPaymentStatus('success');
@@ -47,7 +53,7 @@ export default function PaymentQris() {
             }
         };
 
-        const intervalId = setInterval(pollStatus, 15000);
+        const intervalId = setInterval(pollStatus, 5000);
         pollStatus();
         return () => clearInterval(intervalId);
     }, [orderId]);
