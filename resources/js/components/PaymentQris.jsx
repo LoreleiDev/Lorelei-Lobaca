@@ -19,12 +19,10 @@ export default function PaymentQris() {
     const location = useLocation();
     const navigate = useNavigate();
     const { qrCodeData, orderId } = location.state || {};
-
     const [paymentStatus, setPaymentStatus] = useState('pending');
 
     useEffect(() => {
         if (!orderId) return;
-
         const pollStatus = async () => {
             try {
                 const token = localStorage.getItem('user_token');
@@ -35,13 +33,10 @@ export default function PaymentQris() {
                     const data = await res.json();
                     const status = data.data.status_transaksi;
                     const adminAction = data.data.admin_action_status;
-
-                    // Jika admin tolak → gagal
                     if (adminAction === 'rejected') {
                         setPaymentStatus('failed');
                         return;
                     }
-
                     if (status === 'transaksi-sukses' || status === 'transaksi-diterima') {
                         setPaymentStatus('success');
                     } else if (status === 'transaksi-kadaluarsa' || status === 'transaksi-ditolak') {
@@ -52,7 +47,6 @@ export default function PaymentQris() {
                 console.error("Polling error:", error);
             }
         };
-
         const intervalId = setInterval(pollStatus, 5000);
         pollStatus();
         return () => clearInterval(intervalId);
@@ -78,7 +72,7 @@ export default function PaymentQris() {
                         </div>
                         <h2 className="text-2xl font-bold text-gray-800 mb-2">Pembayaran Berhasil!</h2>
                         <p className="text-gray-600 mb-6">
-                            Terima kasih! Pembayaran untuk pesanan <span className="font-mono font-bold text-yellow-700"><br />{orderId} <br /></span> telah diterima.
+                            Terima kasih! Pembayaran untuk pesanan <span className="font-mono font-bold text-yellow-700"><br />{orderId}<br /></span> telah diterima.
                         </p>
                         <Button
                             onClick={() => navigate('/transaksi')}
@@ -104,7 +98,7 @@ export default function PaymentQris() {
                         </div>
                         <h2 className="text-2xl font-bold text-gray-800 mb-2">Pembayaran Gagal</h2>
                         <p className="text-gray-600 mb-6">
-                            Waktu pembayaran untuk pesanan <span className="font-mono font-bold text-yellow-700"><br />{orderId} <br /></span> telah habis atau dibatalkan.
+                            Waktu pembayaran untuk pesanan <span className="font-mono font-bold text-yellow-700"><br />{orderId}<br /></span> telah habis atau dibatalkan.
                         </p>
                         <Button
                             onClick={() => navigate('/cart')}
@@ -125,13 +119,11 @@ export default function PaymentQris() {
                     <div className="bg-yellow-500 py-5 text-center">
                         <h1 className="text-2xl font-bold text-white tracking-wide">Bayar dengan QRIS</h1>
                     </div>
-
                     <div className="p-6">
                         <div className="text-center mb-6">
                             <p className="text-sm text-gray-500 uppercase tracking-wider font-semibold">Order ID</p>
                             <p className="font-mono text-lg font-bold text-yellow-700 mt-1">{orderId}</p>
                         </div>
-
                         <div className="flex justify-center mb-8">
                             <div className="p-4 bg-gray-50 rounded-xl border border-yellow-200">
                                 <img
@@ -144,19 +136,17 @@ export default function PaymentQris() {
                                 />
                             </div>
                         </div>
-
                         <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded-r-lg p-4 mb-6">
                             <p className="font-bold text-yellow-800 mb-2">Instruksi Pembayaran:</p>
                             <ol className="list-decimal list-inside space-y-1 text-sm text-gray-700 pl-2">
-                                <li>Buka aplikasi e-wallet (OVO, DANA, ShopeePay, dll)</li>
+                                <li>Buka aplikasi e-wallet </li>
                                 <li>Pilih menu <strong>Scan QR</strong></li>
                                 <li>Arahkan kamera ke kode QR di atas</li>
                                 <li>Ikuti petunjuk untuk menyelesaikan pembayaran</li>
                             </ol>
                         </div>
-
                         <div className="text-center text-xs text-gray-500">
-                            <p>Pembayaran akan otomatis diverifikasi setiap 15 detik.</p>
+                            <p>Pembayaran akan otomatis diverifikasi setiap 5 detik.</p>
                         </div>
                     </div>
                 </div>

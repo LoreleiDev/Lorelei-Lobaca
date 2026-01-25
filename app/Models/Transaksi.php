@@ -25,7 +25,6 @@ class Transaksi extends Model
         'transaction_id_midtrans',
         'admin_action_status',
         'admin_id_proses',
-        'admin_id_proses',
         'resi_pengiriman',
         'tanggal_dikirim',
         'tanggal_diterima',
@@ -37,7 +36,7 @@ class Transaksi extends Model
         'ongkir' => 'decimal:2',
     ];
 
-    // Relasi
+
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
@@ -46,5 +45,16 @@ class Transaksi extends Model
     public function transaksiDetail()
     {
         return $this->hasMany(\App\Models\TransaksiDetail::class, 'transaksi_id');
+    }
+
+    public function getPaymentStatusAttribute()
+    {
+
+        return $this->attributes['payment_status'] ?? null;
+    }
+
+    public function setPaymentStatusAttribute($value)
+    {
+        $this->attributes['payment_status'] = $value;
     }
 }

@@ -20,6 +20,7 @@ export default function PesananPage() {
     const [loading, setLoading] = useState(true);
     const [showDetails, setShowDetails] = useState({});
     const [timeRangeFilter, setTimeRangeFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useState('');
     const [sortOption, setSortOption] = useState('terbaru');
     const [totalPendapatan, setTotalPendapatan] = useState(0);
 
@@ -33,28 +34,18 @@ export default function PesananPage() {
             }
 
             let queryParams = [];
-            if (timeRangeFilter) {
-                queryParams.push(`time_range=${timeRangeFilter}`);
-            }
-
+            if (timeRangeFilter) queryParams.push(`time_range=${timeRangeFilter}`);
+            if (statusFilter) queryParams.push(`status=${statusFilter}`);
             const queryString = queryParams.length > 0 ? '?' + queryParams.join('&') : '';
-            const url = `/api/admin/orders${queryString}`;
 
-            const res = await fetch(url, {
+            const res = await fetch(`/api/admin/orders${queryString}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
             if (res.ok) {
-                const contentType = res.headers.get("content-type");
-                if (contentType && contentType.includes("application/json")) {
-                    const data = await res.json();
-                    setOrders(data.data || []);
-                    setTotalPendapatan(data.total_pendapatan || 0);
-                } else {
-                    const text = await res.text();
-                    console.error("Response bukan JSON:", text);
-                    Toast.fire({ icon: "error", title: "Server mengembalikan data tidak valid." });
-                }
+                const data = await res.json();
+                setOrders(data.data || []);
+                setTotalPendapatan(data.total_pendapatan || 0);
             } else {
                 const error = await res.json().catch(() => ({ message: "Gagal memuat data." }));
                 Toast.fire({ icon: "error", title: error.message || "Gagal memuat data." });
@@ -69,7 +60,7 @@ export default function PesananPage() {
 
     useEffect(() => {
         fetchOrders();
-    }, [timeRangeFilter]);
+    }, [timeRangeFilter, statusFilter]);
 
     const toggleDetail = (id) => {
         setShowDetails(prev => ({ ...prev, [id]: !prev[id] }));
@@ -79,7 +70,7 @@ export default function PesananPage() {
         if (action === 'reject') {
             const result = await Swal.fire({
                 title: 'Yakin ingin membatalkan pesanan?',
-                text: "Stok barang akan dikembalikan. Dana tidak akan dikembalikan secara otomatis untuk pembayaran VA.",
+                text: "Stok barang akan dikembalikan. Dana akan dikembalikan ke pelanggan.",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonText: 'Ya, batalkan!',
@@ -95,7 +86,8 @@ export default function PesananPage() {
         }
 
         try {
-            const res = await fetch(`/api/admin/orders/${orderId}/${action}`, {
+            const endpoint = action === 'approve' ? 'approve' : 'reject'; 
+            const res = await fetch(`/api/admin/orders/${orderId}/${endpoint}`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -104,17 +96,15 @@ export default function PesananPage() {
             });
 
             if (res.ok) {
-                Toast.fire({
-                    icon: "success",
-                    title: action === 'approve' ? "Pesanan dikonfirmasi!" : "Pesanan dibatalkan."
-                });
+                const messages = {
+                    approve: "Pesanan dikonfirmasi!",
+                    reject: "Pesanan dibatalkan dan dana dikembalikan."
+                };
+                Toast.fire({ icon: "success", title: messages[action] });
                 fetchOrders();
             } else {
                 const errorData = await res.json().catch(() => ({ message: "Gagal memproses permintaan." }));
-                Toast.fire({
-                    icon: "error",
-                    title: errorData.message || "Gagal memproses permintaan."
-                });
+                Toast.fire({ icon: "error", title: errorData.message || "Gagal memproses permintaan." });
             }
         } catch (error) {
             console.error("Action error:", error);
@@ -134,11 +124,7 @@ export default function PesananPage() {
         let sorted = [...orders];
         switch (sortOption) {
             case 'abjad':
-                return sorted.sort((a, b) => {
-                    const nameA = (a.user?.name || '').toLowerCase();
-                    const nameB = (b.user?.name || '').toLowerCase();
-                    return nameA.localeCompare(nameB);
-                });
+                return sorted.sort((a, b) => (a.user?.name || '').localeCompare(b.user?.name || ''));
             case 'terlama':
                 return sorted.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
             case 'termahal':
@@ -167,16 +153,14 @@ export default function PesananPage() {
         <Sidebar>
             <div>
                 <h2 className="text-2xl font-bold mb-4">Kelola Pesanan</h2>
-
                 <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
                     <p className="text-sm text-green-700">
                         <strong>Total Pendapatan:</strong> {formatRupiah(totalPendapatan)}
                     </p>
                 </div>
 
-                {/* Filter Section: Waktu + Urutan sejajar */}
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg shadow-sm">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Rentang Waktu</label>
                             <select
@@ -189,6 +173,20 @@ export default function PesananPage() {
                                 <option value="weekly">Mingguan</option>
                                 <option value="monthly">Bulanan</option>
                                 <option value="yearly">Tahunan</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-yellow-500 focus:border-yellow-500"
+                            >
+                                <option value="">Semua Status</option>
+                                <option value="pending">Pending</option>
+                                <option value="rejected">Ditolak</option>
+                                <option value="approved">Diterima</option>
+                                <option value="transaksi-kadaluarsa">Expired</option>
                             </select>
                         </div>
                         <div>
@@ -209,91 +207,116 @@ export default function PesananPage() {
                 </div>
 
                 {sortedOrders.length === 0 ? (
-                    <div className="text-gray-500">
-                        Tidak ada pesanan yang ditemukan.
-                    </div>
+                    <div className="text-gray-500">Tidak ada pesanan yang ditemukan.</div>
                 ) : (
                     <div className="space-y-4">
-                        {sortedOrders.map(order => (
-                            <div key={order.transaksi_id} className="border rounded-lg p-4 shadow-sm bg-white">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <p className="font-mono text-sm text-gray-600">
-                                            ID: {order.transaction_id_midtrans}
-                                        </p>
-                                        <p className="text-xs text-gray-500">
-                                            Status: <span className={`font-semibold ${order.admin_action_status === 'pending' ? 'text-yellow-600' : order.admin_action_status === 'approved' ? 'text-green-600' : 'text-red-600'}`}>
-                                                {order.admin_action_status === 'pending' ? 'Menunggu' : order.admin_action_status === 'approved' ? 'Diterima' : 'Ditolak'}
-                                            </span>
-                                        </p>
-                                        <p className="text-xs text-gray-500">
-                                            Pembayaran: <span className="font-semibold">{order.payment_method || 'Metode Tidak Diketahui'}</span>
-                                        </p>
-                                        {showDetails[order.transaksi_id] && (
-                                            <div className="mt-2 text-sm text-gray-700 space-y-1">
-                                                <p><strong>User:</strong> {order.user?.name} ({order.user?.email})</p>
-                                                <p><strong>Alamat:</strong> {order.alamat_pengiriman}</p>
-                                                <p><strong>Total:</strong> {formatRupiah(order.total_harga)}</p>
-                                                <p><strong>Kurir:</strong> {order.kurir} (Ongkir: {formatRupiah(order.ongkir)})</p>
-                                                <p><strong>Dibuat:</strong> {new Date(order.created_at).toLocaleDateString('id-ID', {
-                                                    year: 'numeric',
-                                                    month: 'long',
-                                                    day: 'numeric',
-                                                    hour: '2-digit',
-                                                    minute: '2-digit'
-                                                })}</p>
-                                                <div className="mt-3">
-                                                    <p className="font-semibold text-gray-800">Detail Barang:</p>
-                                                    <ul className="list-disc pl-5 mt-1 space-y-1">
-                                                        {order.transaksi_detail && order.transaksi_detail.length > 0 ? (
-                                                            order.transaksi_detail.map(detail => (
-                                                                <li key={detail.id}>
-                                                                    {detail.buku?.judul || 'Buku Tidak Dikenal'} - Jumlah: {detail.jumlah} - Harga: {formatRupiah(detail.harga_satuan)}
-                                                                </li>
-                                                            ))
-                                                        ) : (
-                                                            <li>Tidak ada detail barang.</li>
-                                                        )}
-                                                    </ul>
+                        {sortedOrders.map(order => {
+                            const isExpired = order.status_transaksi === 'transaksi-kadaluarsa';
+                            const isPending = order.admin_action_status === 'pending';
+                            const isRejected = order.admin_action_status === 'rejected';
+                            const isApproved = order.admin_action_status === 'approved';
+                            const paymentStatus = order.payment_status;
+                            const isPaid = ['settlement', 'capture'].includes(paymentStatus);
+                            const isUnpaid = paymentStatus === 'pending';
+
+                            return (
+                                <div key={order.transaksi_id} className="border rounded-lg p-4 shadow-sm bg-white">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className="font-mono text-sm text-gray-600">ID: {order.transaction_id_midtrans}</p>
+                                            <p className="text-xs text-gray-500">
+                                                Status: <span className={`font-semibold ${isExpired ? 'text-red-600' :
+                                                        isPending ? 'text-yellow-600' :
+                                                            isApproved ? 'text-green-600' : 'text-red-600'
+                                                    }`}>
+                                                    {isExpired ? 'Expired' :
+                                                        isPending ? 'Menunggu' :
+                                                            isApproved ? 'Diterima' : 'Ditolak'}
+                                                </span>
+                                            </p>
+                                            {!isExpired && (
+                                                <p className="text-xs text-gray-500">
+                                                    Status Pembayaran: <span className={`font-semibold ${isPaid ? 'text-green-600' : 'text-red-600'
+                                                        }`}>
+                                                        {isPaid ? 'Sudah Dibayar' : 'Belum Dibayar'}
+                                                    </span>
+                                                </p>
+                                            )}
+                                            <p className="text-xs text-gray-500">
+                                                Pembayaran: <span className="font-semibold">{order.payment_method || 'Metode Tidak Diketahui'}</span>
+                                            </p>
+
+                                            {showDetails[order.transaksi_id] && (
+                                                <div className="mt-2 text-sm text-gray-700 space-y-1">
+                                                    <p><strong>User:</strong> {order.user?.name} ({order.user?.email})</p>
+                                                    <p><strong>Alamat:</strong> {order.alamat_pengiriman}</p>
+                                                    <p><strong>Total:</strong> {formatRupiah(order.total_harga)}</p>
+                                                    <p><strong>Kurir:</strong> {order.kurir} (Ongkir: {formatRupiah(order.ongkir)})</p>
+                                                    <p><strong>Dibuat:</strong> {new Date(order.created_at).toLocaleDateString('id-ID', {
+                                                        year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                                                    })}</p>
+                                                    <div className="mt-3">
+                                                        <p className="font-semibold text-gray-800">Detail Barang:</p>
+                                                        <ul className="list-disc pl-5 mt-1 space-y-1">
+                                                            {order.transaksi_detail?.length > 0 ? (
+                                                                order.transaksi_detail.map(detail => (
+                                                                    <li key={detail.id}>
+                                                                        {detail.buku?.judul || 'Buku Tidak Dikenal'} - Jumlah: {detail.jumlah} - Harga: {formatRupiah(detail.harga_satuan)}
+                                                                    </li>
+                                                                ))
+                                                            ) : (
+                                                                <li>Tidak ada detail barang.</li>
+                                                            )}
+                                                        </ul>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="flex flex-col gap-2">
-                                        <button
-                                            onClick={() => toggleDetail(order.transaksi_id)}
-                                            className="text-xs text-blue-600 hover:underline"
-                                        >
-                                            {showDetails[order.transaksi_id] ? 'Sembunyikan' : 'Detail'}
-                                        </button>
-                                        {order.admin_action_status === 'pending' && (
-                                            <>
-                                                <button
-                                                    onClick={() => handleAction(order.transaksi_id, 'approve')}
-                                                    className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
-                                                >
-                                                    Konfirmasi
-                                                </button>
-                                                <button
-                                                    onClick={() => handleAction(order.transaksi_id, 'reject')}
-                                                    className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
-                                                >
-                                                    Batalkan
-                                                </button>
-                                            </>
-                                        )}
-                                        {order.admin_action_status === 'approved' && (
-                                            <Link
-                                                to="/admin/atur-pesanan"
-                                                className="px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700 text-center"
+                                            )}
+                                        </div>
+
+                                        <div className="flex flex-col gap-2">
+                                            <button
+                                                onClick={() => toggleDetail(order.transaksi_id)}
+                                                className="text-xs text-blue-600 hover:underline"
                                             >
-                                                Atur Pesanan
-                                            </Link>
-                                        )}
+                                                {showDetails[order.transaksi_id] ? 'Sembunyikan' : 'Detail'}
+                                            </button>
+
+                                            {isExpired ? (
+                                                <span className="text-xs text-red-600 font-semibold">EXPIRED</span>
+                                            ) : isRejected ? (
+                                                <span className="text-xs text-purple-600 font-semibold">DITOLAK</span> // ✅ Tidak ada tombol refund ulang
+                                            ) : isPending ? (
+                                                isUnpaid ? (
+                                                    <span className="text-xs text-red-600 font-semibold">BELUM DIBAYAR</span>
+                                                ) : (
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleAction(order.transaksi_id, 'approve')}
+                                                            className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+                                                        >
+                                                            Terima
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleAction(order.transaksi_id, 'reject')}
+                                                            className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                                                        >
+                                                            Batalkan & Refund
+                                                        </button>
+                                                    </>
+                                                )
+                                            ) : isApproved ? (
+                                                <Link
+                                                    to="/admin/atur-pesanan"
+                                                    className="px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700 text-center"
+                                                >
+                                                    Atur Pesanan
+                                                </Link>
+                                            ) : null}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>

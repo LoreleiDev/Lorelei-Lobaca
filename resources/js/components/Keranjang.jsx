@@ -5,6 +5,7 @@ import { Trash2, Plus, Minus, ShoppingCart, Tag } from "lucide-react";
 import NavbarHome from "./ui/NavbarHome";
 import Loading from "./ui/Loading";
 import Swal from "sweetalert2";
+import PaymentMethodModal from "./ui/Pembayaran";
 
 const Toast = Swal.mixin({
     toast: true,
@@ -46,11 +47,6 @@ const paymentMethodLabels = {
     "ovo": "OVO",
     "gopay": "GoPay",
     "dana": "DANA",
-    "bca_transfer": "BCA VA",
-    "bni_transfer": "BNI VA",
-    "bri_transfer": "BRI VA",
-    "mandiri_transfer": "Mandiri Bill",
-    "permata_transfer": "Permata VA",
 };
 
 const formatCourierName = (name) => {
@@ -78,15 +74,15 @@ export default function KeranjangPage() {
     const [Youraddress, setYouraddress] = useState(() => {
         return localStorage.getItem('alamat_lengkap') || "";
     });
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [isCheckingOut, setIsCheckingOut] = useState(false);
 
     const fetchCart = async () => {
         setLoading(true);
         try {
             const token = localStorage.getItem('user_token');
             const res = await fetch("/api/cart", {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
                 const data = await res.json();
@@ -103,7 +99,6 @@ export default function KeranjangPage() {
 
     useEffect(() => {
         fetchCart();
-
         const savedPayment = localStorage.getItem('selected_payment_method');
         if (savedPayment) setSelectedPaymentMethod(savedPayment);
     }, []);
@@ -115,22 +110,16 @@ export default function KeranjangPage() {
             setYouraddress(savedAddress || "");
             setSelectedCourierName(savedCourierName || "");
         };
-
         window.addEventListener('storage', handleStorageChange);
         return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
 
     const updateQuantity = async (itemId, newQuantity, maxStok) => {
         if (newQuantity < 1) return;
-
         if (newQuantity > maxStok) {
-            Toast.fire({
-                icon: "warning",
-                title: `Stok hanya tersedia ${maxStok}. Jumlah tidak bisa ditambah.`
-            });
+            Toast.fire({ icon: "warning", title: `Stok hanya tersedia ${maxStok}. Jumlah tidak bisa ditambah.` });
             return;
         }
-
         const token = localStorage.getItem('user_token');
         const res = await fetch(`/api/cart/${itemId}`, {
             method: 'PUT',
@@ -140,7 +129,6 @@ export default function KeranjangPage() {
             },
             body: JSON.stringify({ jumlah: newQuantity })
         });
-
         if (res.ok) {
             Toast.fire({ icon: "success", title: "Jumlah berhasil diubah." });
             fetchCart();
@@ -153,11 +141,8 @@ export default function KeranjangPage() {
         const token = localStorage.getItem('user_token');
         const res = await fetch(`/api/cart/${itemId}`, {
             method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
+            headers: { 'Authorization': `Bearer ${token}` }
         });
-
         if (res.ok) {
             Toast.fire({ icon: "success", title: "Item berhasil dihapus." });
             fetchCart();
@@ -177,20 +162,16 @@ export default function KeranjangPage() {
     const calculateTotals = () => {
         let subtotal = 0;
         let totalDiscount = 0;
-
         cartItems.forEach(item => {
             const originalPrice = item.buku.harga;
             const quantity = item.jumlah;
             const discountPercent = item.buku.discount_percent || 0;
-
             if (discountPercent > 0) {
                 const discountAmount = Math.round(originalPrice * discountPercent / 100);
                 totalDiscount += discountAmount * quantity;
             }
-
             subtotal += originalPrice * quantity;
         });
-
         return {
             subtotal,
             totalDiscount,
@@ -205,21 +186,17 @@ export default function KeranjangPage() {
         navigate('/alamat-kurir');
     };
 
+    const handleSelectPaymentMethod = (methodId) => {
+        setSelectedPaymentMethod(methodId);
+        setIsPaymentModalOpen(false);
+    };
+
     const handleCheckout = async () => {
         const alamatLengkap = localStorage.getItem('alamat_lengkap');
         const ongkirValue = localStorage.getItem('shipping_cost');
         const kurirCode = localStorage.getItem('selected_courier_code');
         const destinationDistrictId = localStorage.getItem('destination_district_id');
         const paymentMethodFromLS = localStorage.getItem('selected_payment_method');
-
-        // --- TAMBAHKAN CONSOLE LOG INI ---
-        console.log("=== DEBUG: Data Checkout ===");
-        console.log("Alamat Lengkap:", alamatLengkap);
-        console.log("Ongkir Value:", ongkirValue);
-        console.log("Kurir Code:", kurirCode);
-        console.log("Destination District ID:", destinationDistrictId);
-        console.log("Payment Method (from LS):", paymentMethodFromLS);
-        console.log("===========================");
 
         if (!alamatLengkap || !ongkirValue || !kurirCode || !destinationDistrictId) {
             Toast.fire({ icon: "error", title: "Lengkapi alamat dan kurir terlebih dahulu." });
@@ -229,6 +206,8 @@ export default function KeranjangPage() {
             Toast.fire({ icon: "error", title: "Pilih metode pembayaran terlebih dahulu." });
             return;
         }
+
+        setIsCheckingOut(true);
 
         const token = localStorage.getItem('user_token');
         try {
@@ -253,6 +232,7 @@ export default function KeranjangPage() {
             } catch (e) {
                 console.error("Failed to parse JSON response:", e);
                 Toast.fire({ icon: "error", title: "Respon dari server tidak valid." });
+                setIsCheckingOut(false);
                 return;
             }
 
@@ -262,56 +242,12 @@ export default function KeranjangPage() {
                 if (midtransResponse.expiry_time) {
                     localStorage.setItem('payment_expiry', midtransResponse.expiry_time);
                 }
+
                 if (midtransResponse.redirect_url) {
                     window.location.href = midtransResponse.redirect_url;
                     return;
                 }
 
-                const orderId = midtransResponse.order_id;
-                const grossAmount = parseFloat(midtransResponse.gross_amount);
-
-                // 1. Handle PERMATA: kirim ke /payment-va dengan format VA
-                if (paymentMethodFromLS === 'permata_transfer' && midtransResponse.permata_va_number) {
-                    navigate('/payment-va', {
-                        state: {
-                            vaNumbers: [{ va_number: midtransResponse.permata_va_number }],
-                            orderId,
-                            grossAmount,
-                            paymentMethod: paymentMethodFromLS
-                        }
-                    });
-                    return;
-                }
-
-                // 2. Handle MANDIRI (echannel): kirim ke /payment-va dengan Bill Key sebagai VA
-                if (midtransResponse.payment_type === 'echannel' && midtransResponse.bill_key && midtransResponse.biller_code) {
-                    navigate('/payment-va', {
-                        state: {
-                            vaNumbers: [],
-                            orderId: midtransResponse.order_id,
-                            grossAmount: parseFloat(midtransResponse.gross_amount),
-                            paymentMethod: paymentMethodFromLS,
-                            billKey: midtransResponse.bill_key,
-                            billerCode: midtransResponse.biller_code,
-                        }
-                    });
-                    return;
-                }
-
-                // 3. Handle BANK TRANSFER (BCA, BNI, BRI)
-                if (midtransResponse.payment_type === 'bank_transfer' && midtransResponse.va_numbers?.length > 0) {
-                    navigate('/payment-va', {
-                        state: {
-                            vaNumbers: midtransResponse.va_numbers,
-                            orderId,
-                            grossAmount,
-                            paymentMethod: paymentMethodFromLS
-                        }
-                    });
-                    return;
-                }
-
-                // 4. Handle QRIS (OVO, DANA)
                 let qrCodeData = null;
                 if (midtransResponse.actions?.length) {
                     const qrisAction = midtransResponse.actions.find(action => action.name === 'generate-qr-code');
@@ -319,16 +255,17 @@ export default function KeranjangPage() {
                         qrCodeData = qrisAction.url;
                     }
                 }
+
                 if (qrCodeData) {
-                    navigate('/payment-qris', { state: { qrCodeData, orderId } });
+                    navigate('/payment-qris', { state: { qrCodeData, orderId: midtransResponse.order_id } });
                     return;
                 }
 
-                // Fallback
                 Toast.fire({
                     icon: "info",
-                    title: `Silakan selesaikan pembayaran untuk ${midtransResponse.payment_type || 'metode pembayaran'}.`
+                    title: `Silakan selesaikan pembayaran untuk ${paymentMethodLabels[paymentMethodFromLS] || 'metode ini'}.`
                 });
+
             } else {
                 Toast.fire({
                     icon: "error",
@@ -339,16 +276,16 @@ export default function KeranjangPage() {
         } catch (error) {
             console.error("Network error during checkout:", error);
             Toast.fire({ icon: "error", title: "Kesalahan jaringan." });
+        } finally {
+            setIsCheckingOut(false);
         }
     };
 
     if (loading) {
         return (
-            <>
-                <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
-                    <Loading />
-                </div>
-            </>
+            <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
+                <Loading />
+            </div>
         );
     }
 
@@ -370,7 +307,6 @@ export default function KeranjangPage() {
                     </p>
                 </div>
             </div>
-
             <div className="min-h-screen bg-gray-50 py-8">
                 <div className="max-w-6xl mx-auto px-4">
                     {cartItems.length === 0 ? (
@@ -396,7 +332,6 @@ export default function KeranjangPage() {
                                             const discountedPrice = originalPrice - discountAmount;
                                             const itemTotal = discountedPrice * item.jumlah;
                                             const maxStok = item.buku.stok;
-
                                             return (
                                                 <div key={item.cart_item_id} className="p-4 flex flex-col sm:flex-row gap-4">
                                                     <img
@@ -421,7 +356,6 @@ export default function KeranjangPage() {
                                                             </button>
                                                         </div>
                                                         <p className="text-gray-600 text-sm">{item.buku.penulis}</p>
-
                                                         {item.buku.kategori && (
                                                             <div className="mt-1 flex flex-wrap gap-1">
                                                                 {getCategoryLabels(item.buku.kategori).map((label, i) => (
@@ -434,7 +368,6 @@ export default function KeranjangPage() {
                                                                 ))}
                                                             </div>
                                                         )}
-
                                                         <div className="mt-3 flex items-center justify-between">
                                                             <div className="flex items-center gap-2">
                                                                 <button
@@ -455,39 +388,22 @@ export default function KeranjangPage() {
                                                                 {discountPercent > 0 ? (
                                                                     <div className="flex flex-col items-end">
                                                                         <span className="text-green-600 font-bold">
-                                                                            {new Intl.NumberFormat('id-ID', {
-                                                                                style: 'currency',
-                                                                                currency: 'IDR',
-                                                                                minimumFractionDigits: 0
-                                                                            }).format(itemTotal)}
+                                                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(itemTotal)}
                                                                         </span>
                                                                         <span className="text-gray-500 line-through text-xs">
-                                                                            {new Intl.NumberFormat('id-ID', {
-                                                                                style: 'currency',
-                                                                                currency: 'IDR',
-                                                                                minimumFractionDigits: 0
-                                                                            }).format(originalPrice * item.jumlah)}
+                                                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(originalPrice * item.jumlah)}
                                                                         </span>
                                                                         <span className="text-red-600 text-xs">
-                                                                            -{new Intl.NumberFormat('id-ID', {
-                                                                                style: 'currency',
-                                                                                currency: 'IDR',
-                                                                                minimumFractionDigits: 0
-                                                                            }).format(discountAmount * item.jumlah)}
+                                                                            -{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(discountAmount * item.jumlah)}
                                                                         </span>
                                                                     </div>
                                                                 ) : (
                                                                     <span className="text-gray-800 font-bold">
-                                                                        {new Intl.NumberFormat('id-ID', {
-                                                                            style: 'currency',
-                                                                            currency: 'IDR',
-                                                                            minimumFractionDigits: 0
-                                                                        }).format(itemTotal)}
+                                                                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(itemTotal)}
                                                                     </span>
                                                                 )}
                                                             </div>
                                                         </div>
-
                                                         {item.jumlah > maxStok && (
                                                             <p className="text-red-600 text-xs mt-2">
                                                                 Stok hanya {maxStok} buku
@@ -500,65 +416,37 @@ export default function KeranjangPage() {
                                     </div>
                                 </div>
                             </div>
-
                             <div>
                                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-6">
                                     <h2 className="text-lg font-semibold text-gray-800 mb-4">Ringkasan Belanja</h2>
                                     <div className="space-y-3">
                                         <div className="flex justify-between text-gray-600">
                                             <span>Subtotal</span>
-                                            <span>
-                                                {new Intl.NumberFormat('id-ID', {
-                                                    style: 'currency',
-                                                    currency: 'IDR',
-                                                    minimumFractionDigits: 0
-                                                }).format(subtotal)}
-                                            </span>
+                                            <span>{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(subtotal)}</span>
                                         </div>
                                         {totalDiscount > 0 && (
                                             <div className="flex justify-between text-red-600">
                                                 <span>Diskon</span>
-                                                <span>
-                                                    -{new Intl.NumberFormat('id-ID', {
-                                                        style: 'currency',
-                                                        currency: 'IDR',
-                                                        minimumFractionDigits: 0
-                                                    }).format(totalDiscount)}
-                                                </span>
+                                                <span>-{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalDiscount)}</span>
                                             </div>
                                         )}
                                         <div className="flex justify-between text-gray-600">
                                             <span>Ongkos Kirim</span>
                                             <span>
                                                 {ongkir > 0
-                                                    ? new Intl.NumberFormat('id-ID', {
-                                                        style: 'currency',
-                                                        currency: 'IDR',
-                                                        minimumFractionDigits: 0
-                                                    }).format(ongkir)
+                                                    ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(ongkir)
                                                     : selectedCourierName
-                                                        ? new Intl.NumberFormat('id-ID', {
-                                                            style: 'currency',
-                                                            currency: 'IDR',
-                                                            minimumFractionDigits: 0
-                                                        }).format(ongkir)
+                                                        ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(ongkir)
                                                         : "-"}
                                             </span>
                                         </div>
                                         <div className="border-t border-gray-200 pt-3 mt-3">
                                             <div className="flex justify-between font-bold text-lg text-gray-800">
                                                 <span>Total Bayar</span>
-                                                <span>
-                                                    {new Intl.NumberFormat('id-ID', {
-                                                        style: 'currency',
-                                                        currency: 'IDR',
-                                                        minimumFractionDigits: 0
-                                                    }).format(totalBayar)}
-                                                </span>
+                                                <span>{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalBayar)}</span>
                                             </div>
                                         </div>
                                     </div>
-
                                     <div className="mt-6 space-y-4">
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -581,7 +469,6 @@ export default function KeranjangPage() {
                                                 </button>
                                             </div>
                                         </div>
-
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Metode Pembayaran</label>
                                             <div className="flex items-center justify-between gap-2 mt-2 px-2">
@@ -589,7 +476,7 @@ export default function KeranjangPage() {
                                                     {paymentMethodLabels[selectedPaymentMethod] || "Belum Dipilih"}
                                                 </span>
                                                 <button
-                                                    onClick={() => navigate('/payment')}
+                                                    onClick={() => setIsPaymentModalOpen(true)}
                                                     className="cursor-pointer text-blue-600 hover:text-blue-800 text-sm underline"
                                                 >
                                                     Ubah
@@ -597,15 +484,14 @@ export default function KeranjangPage() {
                                             </div>
                                         </div>
                                     </div>
-
                                     <Button
                                         onClick={handleCheckout}
-                                        className="w-full mt-6 bg-blue-600 hover:bg-blue-700 py-3 font-medium"
-                                        disabled={!Youraddress || !selectedPaymentMethod}
+                                        className="cursor-pointer w-full mt-6 bg-blue-600 hover:bg-blue-700 py-3 font-medium"
+                                        disabled={!Youraddress || !selectedPaymentMethod || isCheckingOut}
                                     >
-                                        Checkout
+                                        {isCheckingOut ? "Memproses..." : "Checkout"}
                                     </Button>
-                                    <Link to="/buku" className="block text-center mt-3 text-blue-600 hover:text-blue-800 text-sm">
+                                    <Link to="/buku" className="cursor-pointer block text-center mt-3 text-blue-600 hover:text-blue-800 text-sm">
                                         ← Lanjutkan Belanja
                                     </Link>
                                 </div>
@@ -614,6 +500,18 @@ export default function KeranjangPage() {
                     )}
                 </div>
             </div>
+
+            <PaymentMethodModal
+                isOpen={isPaymentModalOpen}
+                onClose={() => setIsPaymentModalOpen(false)}
+                onSelect={handleSelectPaymentMethod}
+            />
+
+            {isCheckingOut && (
+                <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
+                    <Loading />
+                </div>
+            )}
         </>
     );
 }

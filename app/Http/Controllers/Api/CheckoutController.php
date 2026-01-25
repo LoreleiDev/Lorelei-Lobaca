@@ -50,6 +50,16 @@ class CheckoutController extends Controller
             'destination_district_id' => 'required|integer|min:1',
         ]);
 
+        $allowedMethods = ['gopay', 'dana', 'ovo'];
+        $frontendPaymentMethod = $request->input('payment_method');
+        if (!in_array($frontendPaymentMethod, $allowedMethods)) {
+            Log::error('Checkout Error: Disallowed payment method: ' . $frontendPaymentMethod);
+            return response()->json([
+                'success' => false,
+                'message' => 'Metode pembayaran tidak didukung.'
+            ], 400);
+        }
+
         $now = Carbon::now('Asia/Jakarta');
 
         $totalHargaBarang = 0;
@@ -127,29 +137,7 @@ class CheckoutController extends Controller
 
         $orderId = 'LOBACA-' . time() . '-' . $user->id;
 
-        $frontendPaymentMethod = $request->input('payment_method');
         Log::info('Payment Method from Request:', ['method' => $frontendPaymentMethod]);
-
-        $frontendToMidtrans = [
-            'bca_transfer' => 'bank_transfer',
-            'bni_transfer' => 'bank_transfer',
-            'bri_transfer' => 'bank_transfer',
-            'mandiri_transfer' => 'echannel',
-            'permata_transfer' => 'permata',
-            'gopay' => 'gopay',
-            'dana' => 'qris',
-            'ovo' => 'qris',
-        ];
-
-        $midtransPaymentType = $frontendToMidtrans[$frontendPaymentMethod] ?? null;
-
-        if (!$midtransPaymentType) {
-            Log::error('Checkout Error: Unsupported payment method: ' . $frontendPaymentMethod);
-            return response()->json([
-                'success' => false,
-                'message' => 'Metode pembayaran tidak didukung.'
-            ], 400);
-        }
 
         $customerDetails = [
             'first_name' => $user->first_name,
@@ -187,33 +175,6 @@ class CheckoutController extends Controller
         $payload['customer_details']['shipping_address'] = $shippingAddress;
 
         switch ($frontendPaymentMethod) {
-            case 'bca_transfer':
-            case 'bni_transfer':
-            case 'bri_transfer':
-                $payload['payment_type'] = 'bank_transfer';
-                $bankMapping = [
-                    'bca_transfer' => 'bca',
-                    'bni_transfer' => 'bni',
-                    'bri_transfer' => 'bri',
-                ];
-                $payload['bank_transfer'] = ['bank' => $bankMapping[$frontendPaymentMethod]];
-                break;
-
-            case 'mandiri_transfer':
-                $payload['payment_type'] = 'echannel';
-                $payload['echannel'] = [
-                    'bill_info1' => 'Pembayaran Buku',
-                    'bill_info2' => 'Lobaca Online Store'
-                ];
-                break;
-
-            case 'permata_transfer':
-                $payload['payment_type'] = 'bank_transfer';
-                $payload['bank_transfer'] = [
-                    'bank' => 'permata'
-                ];
-                break;
-
             case 'gopay':
                 $payload['payment_type'] = 'gopay';
                 break;
@@ -222,6 +183,13 @@ class CheckoutController extends Controller
             case 'ovo':
                 $payload['payment_type'] = 'qris';
                 break;
+
+            default:
+                Log::error('Unexpected payment method after validation: ' . $frontendPaymentMethod);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Metode pembayaran tidak valid.'
+                ], 400);
         }
 
         $serverKey = env('MIDTRANS_SERVER_KEY');
@@ -276,12 +244,12 @@ class CheckoutController extends Controller
             'cancel' => 'transaksi-dibatalkan',
             'expire' => 'transaksi-kadaluarsa',
             'deny' => 'transaksi-ditolak',
+            'refund' => 'transaksi-ditolak',
         ];
 
         $midtransStatus = $midtransResponse['transaction_status'] ?? 'pending';
         $mappedStatus = $statusMapping[$midtransStatus] ?? 'transaksi-diproses';
 
-        // ✅ Buat transaksi dengan admin_action_status = 'pending'
         $transaksi = Transaksi::create([
             'user_id' => $user->id,
             'total_harga' => $totalAkhir,
@@ -290,7 +258,7 @@ class CheckoutController extends Controller
             'kurir' => $request->kurir,
             'ongkir' => $ongkir,
             'status_transaksi' => $mappedStatus,
-            'admin_action_status' => 'pending', // ⬅️ PENTING
+            'admin_action_status' => 'pending',
             'transaction_id_midtrans' => $orderId,
             'midtrans_response' => json_encode($midtransResponse),
             'payment_method' => $frontendPaymentMethod,
@@ -339,11 +307,12 @@ class CheckoutController extends Controller
             ]);
         }
 
-        // ✅ KOSONGKAN CART SETELAH CHECKOUT BERHASIL
+        // Kosongkan cart
         CartItem::where('cart_id', $cart->cart_id)->delete();
         $cart->delete();
         Log::info('Cart cleared after successful checkout', ['user_id' => $user->id]);
 
+        // Kirim email ke admin
         $admins = Admin::all();
         foreach ($admins as $admin) {
             try {
@@ -361,7 +330,6 @@ class CheckoutController extends Controller
         ], 201);
     }
 
-    // Webhook hanya update status_transaksi, TIDAK KURANGI STOK
     public function receiveNotification(Request $request)
     {
         $notificationJson = $request->getContent();
@@ -392,11 +360,11 @@ class CheckoutController extends Controller
             'cancel' => 'transaksi-dibatalkan',
             'expire' => 'transaksi-kadaluarsa',
             'deny' => 'transaksi-ditolak',
+            'refund' => 'transaksi-ditolak',
         ];
 
         $mappedStatus = $statusMapping[$transactionStatus] ?? 'transaksi-diproses';
 
-        // ⚠️ HANYA UPDATE STATUS_TRANSAKSI, JANGAN SENTUH STOK!
         $transaksi->update(['status_transaksi' => $mappedStatus]);
 
         Log::info('Webhook Processed - Order ID: ' . $orderId . ' updated to status: ' . $mappedStatus);

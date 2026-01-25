@@ -13,7 +13,7 @@ const Toast = Swal.mixin({
     toast: true,
     position: "top-end",
     showConfirmButton: false,
-    timer: 3000,
+    timer: 1000,
     timerProgressBar: true,
     didOpen: (toast) => {
         toast.onmouseenter = Swal.stopTimer;
@@ -309,7 +309,7 @@ export default function BukuDetail() {
                                             <img
                                                 src={book.image || "/placeholder.svg"}
                                                 alt={book.title}
-                                                className="w-full bg-white rounded-2xl shadow-sm h-auto object-contain max-h-[400px]"
+                                                className="w-full bg-white rounded-2xl shadow-sm h-auto object-contain max-h-100"
                                                 onError={(e) => (e.target.src = "/placeholder.svg")}
                                             />
                                         </div>

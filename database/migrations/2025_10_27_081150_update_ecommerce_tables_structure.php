@@ -46,7 +46,6 @@ return new class extends Migration {
                 'transaksi-kadaluarsa',
                 'pesanan-ditunda'
             ])->default('pesanan-disiapkan');
-            $table->string('snap_token')->nullable();
             $table->string('transaction_id_midtrans')->nullable();
             $table->string('admin_action_status')->default('pending');
             $table->unsignedBigInteger('admin_id_proses')->nullable();
