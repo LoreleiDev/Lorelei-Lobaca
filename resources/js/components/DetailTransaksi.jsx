@@ -1,265 +1,353 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import NavbarHome from "./ui/NavbarHome";
-import Loading from "./ui/Loading";
-import Swal from "sweetalert2";
+import React, { useState, useEffect } from 'react';
+import Swal from 'sweetalert2';
+import {
+    X,
+    Clock,
+    CheckCircle,
+    XCircle,
+    AlertCircle,
+    Ban,
+    Package,
+    Truck,
+    Calendar,
+    CreditCard,
+    MapPin,
+    BookOpen,
+    User,
+    Hash,
+    Scale,
+    ShoppingBag,
+    Wallet,
+    DollarSign
+} from 'lucide-react';
 
-const Toast = Swal.mixin({
-    toast: true,
-    position: "top-end",
-    showConfirmButton: false,
-    timer: 3000,
-    timerProgressBar: true,
-    didOpen: (toast) => {
-        toast.onmouseenter = Swal.stopTimer;
-        toast.onmouseleave = Swal.resumeTimer;
-    }
-});
+export default function OrderDetailModal({ transaction, onClose }) {
+    const [loading, setLoading] = useState(false);
+    const [transactionDetail, setTransactionDetail] = useState(transaction);
 
-const statusLabels = {
-    'pesanan-disiapkan': 'Pesanan Disiapkan',
-    'transaksi-sukses': 'Pembayaran Sukses',
-    'pesanan-sedang-dikirim': 'Sedang Dikirim',
-    'pesanan-telah-diterima': 'Telah Diterima',
-    'pesanan-ditunda': 'Pesanan Ditunda',
-    'transaksi-diproses': 'Transaksi Diproses',
-    'transaksi-ditolak': 'Transaksi Ditolak',
-    'transaksi-dibatalkan': 'Transaksi Dibatalkan',
-    'transaksi-kadaluarsa': 'Transaksi Kadaluarsa'
-};
-
-export default function DetailTransaksiPage() {
-    document.title = "Detail Transaksi - Lobaca";
-    const navigate = useNavigate();
-    const { id } = useParams(); // Ambil ID dari URL
-    const [transaksi, setTransaksi] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const statusConfig = {
+        'transaksi-diproses': {
+            label: 'Diproses',
+            color: 'bg-blue-50',
+            textColor: 'text-blue-700',
+            borderColor: 'border-blue-200',
+            icon: <Clock className="w-4 h-4" />
+        },
+        'transaksi-sukses': {
+            label: 'Berhasil',
+            color: 'bg-green-50',
+            textColor: 'text-green-700',
+            borderColor: 'border-green-200',
+            icon: <CheckCircle className="w-4 h-4" />
+        },
+        'transaksi-dibatalkan': {
+            label: 'Dibatalkan',
+            color: 'bg-red-50',
+            textColor: 'text-red-700',
+            borderColor: 'border-red-200',
+            icon: <XCircle className="w-4 h-4" />
+        },
+        'transaksi-kadaluarsa': {
+            label: 'Kadaluarsa',
+            color: 'bg-gray-50',
+            textColor: 'text-gray-700',
+            borderColor: 'border-gray-200',
+            icon: <AlertCircle className="w-4 h-4" />
+        },
+        'transaksi-ditolak': {
+            label: 'Ditolak',
+            color: 'bg-red-50',
+            textColor: 'text-red-700',
+            borderColor: 'border-red-200',
+            icon: <Ban className="w-4 h-4" />
+        },
+    };
 
     useEffect(() => {
-        const fetchTransaksi = async () => {
+        if (transaction && !transaction.items) {
+            fetchTransactionDetail();
+        }
+    }, [transaction]);
+
+    const fetchTransactionDetail = async () => {
+        try {
             setLoading(true);
-            try {
-                const token = localStorage.getItem('user_token');
-                if (!token) {
-                    Toast.fire({ icon: "error", title: "Silakan login terlebih dahulu." });
-                    navigate('/login');
-                    return;
-                }
+            const token = localStorage.getItem('user_token');
 
-                const res = await fetch(`/api/transaksi/${id}`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    setTransaksi(data.data.transaksi);
-                } else {
-                    Toast.fire({ icon: "error", title: "Gagal memuat transaksi." });
-                    navigate('/cart');
+            const response = await fetch(`/api/order-history/${transaction.transaksi_id}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
                 }
-            } catch (error) {
-                Toast.fire({ icon: "error", title: "Kesalahan jaringan." });
-            } finally {
-                setLoading(false);
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                setTransactionDetail(result.data);
+            } else {
+                throw new Error(result.message || 'Gagal mengambil detail transaksi');
+            }
+        } catch (error) {
+            console.error('Error fetching transaction detail:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal',
+                text: error.message || 'Gagal mengambil detail transaksi'
+            });
+            onClose();
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const formatCurrency = (amount) => {
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(amount).replace('Rp', 'Rp ').trim();
+    };
+
+    const formatNumber = (number) => {
+        return new Intl.NumberFormat('id-ID').format(number);
+    };
+
+    const getStatusBadge = (status) => {
+        const config = statusConfig[status] || {
+            label: 'Unknown',
+            color: 'bg-gray-50',
+            textColor: 'text-gray-700',
+            borderColor: 'border-gray-200',
+            icon: <AlertCircle className="w-4 h-4" />
+        };
+        return (
+            <span className={`${config.color} ${config.textColor} border ${config.borderColor} px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2`}>
+                {config.icon} {config.label}
+            </span>
+        );
+    };
+
+    useEffect(() => {
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') {
+                onClose();
             }
         };
 
-        fetchTransaksi();
-    }, [id]);
+        document.addEventListener('keydown', handleEscape);
+        return () => document.removeEventListener('keydown', handleEscape);
+    }, [onClose]);
 
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <Loading />
-            </div>
-        );
-    }
-
-    if (!transaksi) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <p className="text-gray-600">Transaksi tidak ditemukan.</p>
-            </div>
-        );
-    }
-
-    const calculateTotals = () => {
-        let subtotal = 0;
-        let totalDiscount = 0;
-
-        transaksi.transaksiDetails.forEach(item => {
-            const originalPrice = item.harga_satuan + (item.harga_satuan * item.buku.discount_percent / 100); // Harga asli
-            const discountAmount = item.buku.discount_percent > 0 ? (originalPrice * item.buku.discount_percent / 100) : 0;
-            totalDiscount += discountAmount * item.jumlah;
-            subtotal += originalPrice * item.jumlah;
-        });
-
-        return {
-            subtotal,
-            totalDiscount,
-            finalTotal: subtotal - totalDiscount
-        };
+    const handleBackdropClick = (e) => {
+        if (e.target === e.currentTarget) {
+            onClose();
+        }
     };
 
-    const { subtotal, totalDiscount, finalTotal } = calculateTotals();
+    if (!transactionDetail) {
+        return null;
+    }
 
     return (
-        <>
-            <NavbarHome />
-            <div className="min-h-screen bg-gray-50 py-8">
-                <div className="max-w-6xl mx-auto px-4">
-                    <div className="mb-8">
-                        <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Detail Transaksi</h1>
-                        <p className="text-gray-600 mt-1">Periksa dan atur buku yang ingin kamu beli</p>
+        <div className="fixed inset-0  bg-gray-500/70 flex items-center justify-center p-4 z-50" onClick={handleBackdropClick}>
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+                {/* Modal Header */}
+                <div className="bg-gray-800 p-6 text-white flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                        <Package className="w-6 h-6" />
+                        <div>
+                            <h1 className="text-xl font-semibold">Detail Pesanan</h1>
+                            <p className="text-gray-300 text-sm mt-1">Order ID: {transactionDetail.order_id}</p>
+                        </div>
                     </div>
+                    <div className="flex items-center gap-4">
+                        {getStatusBadge(transactionDetail.status_transaksi)}
+                        <button
+                            onClick={onClose}
+                            className="p-2 hover:bg-gray-700 rounded-full transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+                </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* Daftar Item */}
-                        <div className="lg:col-span-2">
-                            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                                <div className="p-4 border-b border-gray-200">
-                                    <h2 className="text-lg font-semibold text-gray-800">Daftar Barang</h2>
-                                </div>
-                                <div className="divide-y divide-gray-100">
-                                    {transaksi.transaksiDetails.map((item) => {
-                                        const originalPrice = item.harga_satuan + (item.harga_satuan * item.buku.discount_percent / 100);
-                                        const discountPercent = item.buku.discount_percent || 0;
-                                        const discountAmount = discountPercent > 0 ? Math.round(originalPrice * discountPercent / 100) : 0;
-                                        const discountedPrice = originalPrice - discountAmount;
-                                        const itemTotal = discountedPrice * item.jumlah;
-
-                                        return (
-                                            <div key={item.transaksi_detail_id} className="p-4 flex flex-col sm:flex-row gap-4">
-                                                <img
-                                                    src={item.buku.foto || "/placeholder.svg"}
-                                                    alt={item.buku.judul}
-                                                    className="w-24 h-32 object-cover rounded-md border border-gray-200"
-                                                />
-                                                <div className="flex-1">
-                                                    <div className="flex justify-between">
-                                                        <h3 className="font-semibold text-gray-800">{item.buku.judul}</h3>
-                                                    </div>
-                                                    <p className="text-gray-600 text-sm">{item.buku.penulis}</p>
-
-                                                    {/* Kategori */}
-                                                    {item.buku.kategori && (
-                                                        <div className="mt-1 flex flex-wrap gap-1">
-                                                            {item.buku.kategori.split(',').map((cat, i) => (
-                                                                <span
-                                                                    key={i}
-                                                                    className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full truncate"
-                                                                >
-                                                                    {cat.trim()}
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    )}
-
-                                                    {/* Harga */}
-                                                    <div className="mt-3 flex items-center justify-between">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-gray-800 font-medium">{item.jumlah}</span>
-                                                        </div>
-                                                        <div className="text-right">
-                                                            {discountPercent > 0 ? (
-                                                                <div className="flex flex-col items-end">
-                                                                    <span className="text-green-600 font-bold">
-                                                                        {new Intl.NumberFormat('id-ID', {
-                                                                            style: 'currency',
-                                                                            currency: 'IDR',
-                                                                            minimumFractionDigits: 0
-                                                                        }).format(itemTotal)}
-                                                                    </span>
-                                                                    <span className="text-gray-500 line-through text-xs">
-                                                                        {new Intl.NumberFormat('id-ID', {
-                                                                            style: 'currency',
-                                                                            currency: 'IDR',
-                                                                            minimumFractionDigits: 0
-                                                                        }).format(originalPrice * item.jumlah)}
-                                                                    </span>
-                                                                    <span className="text-red-600 text-xs">
-                                                                        -{new Intl.NumberFormat('id-ID', {
-                                                                            style: 'currency',
-                                                                            currency: 'IDR',
-                                                                            minimumFractionDigits: 0
-                                                                        }).format(discountAmount * item.jumlah)}
-                                                                    </span>
-                                                                </div>
-                                                            ) : (
-                                                                <span className="text-gray-800 font-bold">
-                                                                    {new Intl.NumberFormat('id-ID', {
-                                                                        style: 'currency',
-                                                                        currency: 'IDR',
-                                                                        minimumFractionDigits: 0
-                                                                    }).format(itemTotal)}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
+                {/* Modal Content */}
+                <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                    {loading ? (
+                        <div className="text-center py-8">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-800 mx-auto"></div>
+                            <p className="text-gray-600 mt-4">Memuat detail transaksi...</p>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Order Information */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                                <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <Calendar className="w-4 h-4 text-gray-600" />
+                                        <h3 className="font-semibold text-gray-700">Informasi Pesanan</h3>
+                                    </div>
+                                    <div className="space-y-3 text-sm">
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex items-center gap-2 text-gray-600">
+                                                <Calendar className="w-3 h-3" />
+                                                <span>Tanggal:</span>
                                             </div>
-                                        );
-                                    })}
+                                            <span className="text-gray-800 font-medium">
+                                                {new Date(transactionDetail.created_at).toLocaleDateString('id-ID', {
+                                                    year: 'numeric',
+                                                    month: 'long',
+                                                    day: 'numeric',
+                                                    hour: '2-digit',
+                                                    minute: '2-digit'
+                                                })}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex items-center gap-2 text-gray-600">
+                                                <CreditCard className="w-3 h-3" />
+                                                <span>Metode Pembayaran:</span>
+                                            </div>
+                                            <span className="text-gray-800 font-medium">{transactionDetail.payment_method.toUpperCase()}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex items-center gap-2 text-gray-600">
+                                                <Wallet className="w-3 h-3" />
+                                                <span>Status:</span>
+                                            </div>
+                                            <span className="text-gray-800 font-medium">{statusConfig[transactionDetail.status_transaksi]?.label}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <MapPin className="w-4 h-4 text-gray-600" />
+                                        <h3 className="font-semibold text-gray-700">Alamat Pengiriman</h3>
+                                    </div>
+                                    <div className="space-y-3 text-sm">
+                                        <p className="text-gray-800 mb-2">{transactionDetail.alamat_pengiriman}</p>
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex items-center gap-2 text-gray-600">
+                                                <Truck className="w-3 h-3" />
+                                                <span>Kurir:</span>
+                                            </div>
+                                            <span className="text-gray-800 font-medium">{transactionDetail.kurir}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex items-center gap-2 text-gray-600">
+                                                <DollarSign className="w-3 h-3" />
+                                                <span>Ongkir:</span>
+                                            </div>
+                                            <span className="text-gray-800 font-medium">{formatCurrency(transactionDetail.ongkir)}</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Ringkasan Belanja */}
-                        <div>
-                            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-6">
-                                <h2 className="text-lg font-semibold text-gray-800 mb-4">Ringkasan Belanja</h2>
-                                <div className="space-y-3">
-                                    <div className="flex justify-between text-gray-600">
-                                        <span>Subtotal</span>
-                                        <span>
-                                            {new Intl.NumberFormat('id-ID', {
-                                                style: 'currency',
-                                                currency: 'IDR',
-                                                minimumFractionDigits: 0
-                                            }).format(subtotal)}
-                                        </span>
-                                    </div>
-                                    {totalDiscount > 0 && (
-                                        <div className="flex justify-between text-green-600">
-                                            <span>Diskon</span>
-                                            <span>
-                                                -{new Intl.NumberFormat('id-ID', {
-                                                    style: 'currency',
-                                                    currency: 'IDR',
-                                                    minimumFractionDigits: 0
-                                                }).format(totalDiscount)}
-                                            </span>
+                            {/* Items List */}
+                            <div className="mb-8">
+                                <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-200">
+                                    <ShoppingBag className="w-5 h-5 text-gray-600" />
+                                    <h3 className="font-semibold text-gray-700">Daftar Barang</h3>
+                                </div>
+                                <div className="space-y-4">
+                                    {transactionDetail.items?.map((item) => (
+                                        <div key={item.buku_id} className="flex gap-4 p-4 bg-gray-50 rounded-md border border-gray-200 hover:border-gray-300 transition-colors">
+                                            <img
+                                                src={item.gambar}
+                                                alt={item.judul}
+                                                className="w-20 h-24 object-cover rounded border border-gray-300"
+                                            />
+                                            <div className="flex-1">
+                                                <div className="flex items-start justify-between">
+                                                    <div>
+                                                        <h4 className="font-medium text-gray-800 flex items-center gap-2">
+                                                            <BookOpen className="w-4 h-4 text-gray-500" />
+                                                            {item.judul}
+                                                        </h4>
+                                                        <p className="text-gray-600 text-sm mt-1 flex items-center gap-2">
+                                                            <User className="w-3 h-3" />
+                                                            {item.penulis}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-wrap gap-2 mt-3 text-xs">
+                                                    <span className="bg-white px-2 py-1 rounded border border-gray-300 flex items-center gap-1">
+                                                        Qty: {formatNumber(item.jumlah)}
+                                                    </span>
+                                                    <span className="bg-white px-2 py-1 rounded border border-gray-300 flex items-center gap-1">
+                                                        {formatCurrency(item.harga_satuan)}
+                                                    </span>
+                                                    <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded border border-gray-300 font-medium flex items-center gap-1">
+                                                        Subtotal: {formatCurrency(item.subtotal)}
+                                                    </span>
+                                                    {item.has_promo && (
+                                                        <span className="bg-red-50 text-red-700 px-2 py-1 rounded border border-red-200 font-medium flex items-center gap-1">
+                                                            Promo: {item.discount_percent}% off
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex flex-wrap gap-3 mt-2 text-xs text-gray-500">
+                                                    {item.penerbit && (
+                                                        <span className="flex items-center gap-1">
+                                                            Penerbit: {item.penerbit}
+                                                        </span>
+                                                    )}
+                                                    {item.tahun && (
+                                                        <span className="flex items-center gap-1">
+                                                            Tahun: {item.tahun}
+                                                        </span>
+                                                    )}
+                                                    {item.isbn && (
+                                                        <span className="flex items-center gap-1">
+                                                            <Hash className="w-3 h-3" />
+                                                            ISBN: {item.isbn}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
-                                    )}
-                                    <div className="border-t border-gray-200 pt-3 mt-3">
-                                        <div className="flex justify-between font-bold text-lg text-gray-800">
-                                            <span>Total</span>
-                                            <span>
-                                                {new Intl.NumberFormat('id-ID', {
-                                                    style: 'currency',
-                                                    currency: 'IDR',
-                                                    minimumFractionDigits: 0
-                                                }).format(finalTotal)}
-                                            </span>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Total Summary */}
+                            <div className="bg-gray-50 p-6 rounded-md border border-gray-200">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="text-sm text-gray-600 space-y-3">
+                                        <div className="flex items-center gap-2">
+                                            <Scale className="w-4 h-4" />
+                                            <span>Total Berat: {formatNumber(transactionDetail.total_berat || 0)} gram</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <ShoppingBag className="w-4 h-4" />
+                                            <span>Jumlah Item: {formatNumber(transactionDetail.items?.length || 0)}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <DollarSign className="w-4 h-4" />
+                                            <span>Biaya Pengiriman: {formatCurrency(transactionDetail.ongkir || 0)}</span>
                                         </div>
                                     </div>
-                                    <div className="mt-4">
-                                        <h3 className="font-semibold text-gray-800 mb-2">Status Transaksi</h3>
-                                        <p className="text-gray-600">
-                                            {statusLabels[transaksi.status_transaksi] || transaksi.status_transaksi}
+                                    <div className="text-right">
+                                        <p className="text-sm text-gray-600 mb-1">Total Pembayaran</p>
+                                        <p className="text-2xl font-semibold text-gray-800 flex items-center justify-end gap-2">
+                                            <Wallet className="w-6 h-6" />
+                                            {formatCurrency(transactionDetail.total_harga)}
+                                        </p>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Termasuk ongkir dan biaya lainnya
                                         </p>
                                     </div>
                                 </div>
-                                <Link to="/buku" className="block text-center mt-3 text-blue-600 hover:text-blue-800 text-sm">
-                                    ← Lanjutkan Belanja
-                                </Link>
                             </div>
-                        </div>
-                    </div>
+                        </>
+                    )}
                 </div>
             </div>
-        </>
+        </div>
     );
 }
