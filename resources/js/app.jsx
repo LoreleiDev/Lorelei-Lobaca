@@ -28,6 +28,7 @@ import AddressCourierSelector from "./components/ui/AlamatKurir";
 import PaymentQris from "./components/PaymentQris";
 import DetailTransaksiPage from "./components/DetailTransaksi";
 import RiwayatPesanan from "./components/RiwayatPesanan";
+import Notifikasi from "./components/Notifikasi";
 
 import AdminLogin from "./components/admin/LoginAdmin";
 import AdminDashboard from "./components/admin/Dashboard";
@@ -63,6 +64,7 @@ ReactDOM.createRoot(document.getElementById("app")).render(
                     <Route path="/payment-qris" element={<PaymentQris />} />
                     <Route path="/transaksi" element={<DetailTransaksiPage />} />
                     <Route path="/purchase-history" element={<RiwayatPesanan />} />
+                    <Route path="/notifications" element={<Notifikasi />} />
 
                     {/* === USER PROTECTED ROUTES === */}
                     <Route element={<UserRoute />}>

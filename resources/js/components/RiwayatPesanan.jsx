@@ -501,11 +501,11 @@ export default function OrderHistory() {
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
                                             <div className="bg-gray-50 p-3 rounded border border-gray-200">
                                                 <div className="flex items-center gap-2 text-gray-600 mb-1">
-                                                    <ShoppingBag className="w-3.5 h-3.5" />
-                                                    <span className="text-xs font-medium">Total Items</span>
+                                                    <Wallet className="w-3.5 h-3.5" />
+                                                    <span className="text-xs font-medium">Total Harga</span>
                                                 </div>
-                                                <p className="text-lg font-semibold text-gray-800">
-                                                    {formatNumber(transaction.items.length)} item
+                                                <p className="text-lg font-semibold text-green-600">
+                                                    {formatCurrency(transaction.total_harga)}
                                                 </p>
                                             </div>
                                             <div className="bg-gray-50 p-3 rounded border border-gray-200">
@@ -515,15 +515,6 @@ export default function OrderHistory() {
                                                 </div>
                                                 <p className="text-lg font-semibold text-blue-600">
                                                     {formatCurrency(transaction.ongkir || 0)}
-                                                </p>
-                                            </div>
-                                            <div className="bg-gray-50 p-3 rounded border border-gray-200">
-                                                <div className="flex items-center gap-2 text-gray-600 mb-1">
-                                                    <Wallet className="w-3.5 h-3.5" />
-                                                    <span className="text-xs font-medium">Total Harga</span>
-                                                </div>
-                                                <p className="text-lg font-semibold text-green-600">
-                                                    {formatCurrency(transaction.total_harga)}
                                                 </p>
                                             </div>
                                             <div className="bg-gray-50 p-3 rounded border border-gray-200">

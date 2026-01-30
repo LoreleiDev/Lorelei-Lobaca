@@ -6,16 +6,17 @@ import NavbarHome from "./ui/NavbarHome";
 import Loading from "./ui/Loading";
 import Swal from "sweetalert2";
 import PaymentMethodModal from "./ui/Pembayaran";
+import { useCart } from "@/hooks/UseCart";
 
 const Toast = Swal.mixin({
     toast: true,
     position: "top-end",
     showConfirmButton: false,
-    timer: 3000,
-    timerProgressBar: true,
+    timer: 1000,
     didOpen: (toast) => {
-        toast.onmouseenter = Swal.stopTimer;
-        toast.onmouseleave = Swal.resumeTimer;
+        toast.addEventListener('click', () => {
+            Swal.close();
+        });
     }
 });
 
@@ -77,6 +78,13 @@ export default function KeranjangPage() {
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [isCheckingOut, setIsCheckingOut] = useState(false);
 
+    const {
+        addToCart,
+        removeFromCart,
+        updateCartItemCount,
+        updateCartItemQuantity,
+    } = useCart();
+
     const fetchCart = async () => {
         setLoading(true);
         try {
@@ -87,6 +95,7 @@ export default function KeranjangPage() {
             if (res.ok) {
                 const data = await res.json();
                 setCartItems(data.data.items || []);
+                updateCartItemCount(data.data.total_items || 0);
             } else {
                 Toast.fire({ icon: "error", title: "Gagal memuat keranjang." });
             }
@@ -115,35 +124,27 @@ export default function KeranjangPage() {
     }, []);
 
     const updateQuantity = async (itemId, newQuantity, maxStok) => {
-        if (newQuantity < 1) return;
+        if (newQuantity < 1) {
+
+            removeItem(itemId);
+            return;
+        }
         if (newQuantity > maxStok) {
             Toast.fire({ icon: "warning", title: `Stok hanya tersedia ${maxStok}. Jumlah tidak bisa ditambah.` });
             return;
         }
-        const token = localStorage.getItem('user_token');
-        const res = await fetch(`/api/cart/${itemId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ jumlah: newQuantity })
-        });
-        if (res.ok) {
-            Toast.fire({ icon: "success", title: "Jumlah berhasil diubah." });
+
+        const success = await updateCartItemQuantity(itemId, newQuantity);
+        if (success) {
             fetchCart();
         } else {
-            Toast.fire({ icon: "error", title: "Gagal mengubah jumlah." });
+            Toast.fire({ icon: "error", title: "Gagal mengubah jumlah item." });
         }
     };
 
     const removeItem = async (itemId) => {
-        const token = localStorage.getItem('user_token');
-        const res = await fetch(`/api/cart/${itemId}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
+        const success = await removeFromCart(itemId);
+        if (success) {
             Toast.fire({ icon: "success", title: "Item berhasil dihapus." });
             fetchCart();
         } else {
@@ -371,7 +372,7 @@ export default function KeranjangPage() {
                                                         <div className="mt-3 flex items-center justify-between">
                                                             <div className="flex items-center gap-2">
                                                                 <button
-                                                                    onClick={() => updateQuantity(item.cart_item_id, item.jumlah - 1, Infinity)}
+                                                                    onClick={() => updateQuantity(item.cart_item_id, item.jumlah - 1, maxStok)}
                                                                     className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
                                                                 >
                                                                     <Minus size={16} />

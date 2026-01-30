@@ -15,10 +15,10 @@ const Toast = Swal.mixin({
     position: "top-end",
     showConfirmButton: false,
     timer: 1000,
-    timerProgressBar: true,
     didOpen: (toast) => {
-        toast.onmouseenter = Swal.stopTimer;
-        toast.onmouseleave = Swal.resumeTimer;
+        toast.addEventListener('click', () => {
+            Swal.close(); 
+        });
     }
 });
 

@@ -75,6 +75,26 @@ export const CartProvider = ({ children }) => {
         }
     };
 
+    const updateCartItemQuantity = async (itemId, jumlah) => {
+        const token = localStorage.getItem('user_token');
+        if (!token) return false;
+
+        try {
+            const res = await axios.put(`/api/cart/${itemId}`, { jumlah }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (res.data.success && res.data.data?.total_cart_count !== undefined) {
+                updateCartItemCount(res.data.data.total_cart_count);
+                return true;
+            }
+            return false;
+        } catch (err) {
+            console.error("Update cart item error:", err);
+            return false;
+        }
+    };
+
     const clearCart = async () => {
         const token = localStorage.getItem('user_token');
         if (!token) return false;
@@ -111,6 +131,7 @@ export const CartProvider = ({ children }) => {
                 removeFromCart,
                 clearCart,
                 updateCartItemCount,
+                updateCartItemQuantity,
             }}
         >
             {children}
