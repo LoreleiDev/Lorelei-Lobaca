@@ -75,7 +75,7 @@ export default function PaymentQris() {
                             Terima kasih! Pembayaran untuk pesanan <span className="font-mono font-bold text-yellow-700"><br />{orderId}<br /></span> telah diterima.
                         </p>
                         <Button
-                            onClick={() => navigate('/transaksi')}
+                            onClick={() => navigate('/purchase-history')}
                             className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
                         >
                             Lihat Detail Transaksi
