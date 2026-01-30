@@ -11,12 +11,12 @@ use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\Api\EmailController;
 use App\Http\Controllers\Api\CheckoutController;
 use App\Http\Controllers\Api\WishlistController;
-use App\Http\Controllers\Api\TransaksiController;
 use App\Http\Controllers\Api\Admin\BookController;
 use App\Http\Controllers\Api\BookPublicController;
 use App\Http\Controllers\Api\RajaongkirController;
 use App\Http\Controllers\Api\Admin\PromoController;
 use App\Http\Controllers\Api\PromoPublicController;
+use App\Http\Controllers\Api\OrderHistoryController;
 use App\Http\Controllers\Api\TransactionStatusController;
 
 /*
@@ -62,6 +62,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/profile', [ProfileController::class, 'updateProfile']);
     // --- Cart ---
     Route::apiResource('/cart', CartController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::get('/cart/count', [CartController::class, 'getCartCount']);
     // --- Wishlist ---
     Route::get('/wishlist', [WishlistController::class, 'index']);
     Route::post('/wishlist', [WishlistController::class, 'store']);
@@ -80,6 +81,13 @@ Route::middleware('auth:sanctum')->group(function () {
     // --- Status Transaksi ---
     Route::get('/transaction/{orderId}/status', [TransactionStatusController::class, 'show']);
     });
+
+    // --- Order History ---
+Route::middleware('auth:sanctum')->prefix('order-history')->group(function () {
+    Route::get('/', [OrderHistoryController::class, 'getUserTransactions']);
+    Route::get('/{transaksiId}', [OrderHistoryController::class, 'getTransactionDetails']);
+    Route::get('/filter', [OrderHistoryController::class, 'filterTransactionsByStatus']);
+});
 
 Route::post('/checkout/notification', [CheckoutController::class, 'receiveNotification']);
 

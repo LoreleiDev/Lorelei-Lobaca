@@ -6,7 +6,6 @@ export default function ProfileActions({ onEditProfile }) {
     const navigate = useNavigate();
 
     const handleLogout = async () => {
-        // Show confirmation dialog
         const result = await Swal.fire({
             title: 'Yakin ingin keluar?',
             text: "Anda akan diarahkan ke halaman utama setelah logout.",

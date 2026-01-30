@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Buku;
 use App\Models\Promo;
@@ -86,11 +87,14 @@ class CartController extends Controller
             ];
         });
 
+        $totalItems = $cart->items->sum('jumlah');
+
         return response()->json([
             'success' => true,
             'data' => [
                 'items' => $items,
                 'cart_id' => $cart->cart_id,
+                'total_items' => (int) $totalItems,
             ],
         ], 200);
     }
@@ -111,15 +115,23 @@ class CartController extends Controller
         $existingItem = $cart->items()->where('buku_id', $validated['buku_id'])->first();
 
         if ($existingItem) {
-            $existingItem->increment('jumlah', $validated['jumlah']);
+            $newJumlah = $existingItem->jumlah + $validated['jumlah'];
+            $existingItem->update(['jumlah' => $newJumlah]);
+            $updatedItem = $existingItem->fresh();
         } else {
-            $cart->items()->create($validated);
+            $updatedItem = $cart->items()->create($validated);
         }
+
+        $totalItems = $cart->items()->sum('jumlah');
 
         return response()->json([
             'success' => true,
             'message' => 'Item berhasil ditambahkan ke keranjang.',
-            'data' => $cart->fresh()->load('items.buku'),
+            'data' => [
+                'updated_item' => $updatedItem,
+                'total_cart_count' => (int) $totalItems,
+                'cart_id' => $cart->cart_id,
+            ],
         ], 201);
     }
 
@@ -135,10 +147,15 @@ class CartController extends Controller
 
         $cartItem->update(['jumlah' => $validated['jumlah']]);
 
+        $totalItems = $cartItem->cart->items()->sum('jumlah');
+
         return response()->json([
             'success' => true,
             'message' => 'Item keranjang berhasil diperbarui.',
-            'data' => $cartItem->fresh()->load('buku'),
+            'data' => [
+                'updated_item' => $cartItem->fresh()->load('buku'),
+                'total_cart_count' => (int) $totalItems,
+            ],
         ], 200);
     }
 
@@ -147,11 +164,17 @@ class CartController extends Controller
         $cartItem = CartItem::with('cart.user')->findOrFail($id);
 
         $this->authorizeItem($cartItem);
+        $cart = $cartItem->cart;
         $cartItem->delete();
+
+        $totalItems = $cart->items()->sum('jumlah');
 
         return response()->json([
             'success' => true,
             'message' => 'Item berhasil dihapus dari keranjang.',
+            'data' => [
+                'total_cart_count' => (int) $totalItems,
+            ],
         ], 200);
     }
 
@@ -167,7 +190,35 @@ class CartController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Keranjang berhasil dikosongkan.',
+            'data' => [
+                'total_cart_count' => 0,
+            ],
         ], 200);
+    }
+
+    public function getCartCount(Request $request)
+    {
+        $user = $request->user();
+        
+        $cart = Cart::where('user_id', $user->id)->first();
+        
+        if (!$cart) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'total_items' => 0
+                ]
+            ]);
+        }
+        
+        $totalItems = $cart->items()->sum('jumlah');
+        
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'total_items' => (int) $totalItems
+            ]
+        ]);
     }
 
     private function authorizeItem(CartItem $item)

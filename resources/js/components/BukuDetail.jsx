@@ -7,6 +7,7 @@ import Loading from "@/components/ui/Loading";
 import AnimatedWaves from "@/components/ui/AnimatedWaves";
 import { useAuth } from "@/hooks/useAuth";
 import { useWishlist } from "@/hooks/useWishlist";
+import { useCart } from "@/hooks/UseCart";
 import Swal from "sweetalert2";
 
 const Toast = Swal.mixin({
@@ -182,39 +183,19 @@ export default function BukuDetail() {
         }
     };
 
+    const { addToCart } = useCart();
     const handleAddToCart = async (e) => {
         e.preventDefault();
-
         if (!isLoggedIn) {
             await requireLogin("menambahkan ke keranjang");
             return;
         }
 
-
-        const token = localStorage.getItem('user_token');
-
-        try {
-            const res = await fetch('/api/cart', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    buku_id: bookId,
-                    jumlah: 1
-                })
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                Toast.fire({ icon: "success", title: "Buku berhasil ditambahkan ke keranjang!" });
-            } else {
-                const errorData = await res.json();
-                Toast.fire({ icon: "error", title: errorData.message || "Gagal menambahkan ke keranjang." });
-            }
-        } catch (error) {
-            Toast.fire({ icon: "error", title: "Kesalahan jaringan." });
+        const success = await addToCart(bookId, 1);
+        if (success) {
+            Toast.fire({ icon: "success", title: "Buku berhasil ditambahkan ke keranjang!" });
+        } else {
+            Toast.fire({ icon: "error", title: "Gagal menambahkan ke keranjang." });
         }
     };
 

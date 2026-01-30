@@ -12,14 +12,14 @@ import {
     Menu,
     ArrowRight,
     ChevronDown,
-    ShoppingBag,
-    Truck,
+    Clock,
     LogOut,
     LogIn
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Swal from 'sweetalert2';
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/UseAuth";
+import { useCart } from "@/hooks/UseCart";
 
 const BOOK_CATEGORIES = [
     { value: "fiksi", label: "Fiksi" },
@@ -65,11 +65,11 @@ const overlayVariants = {
 export default function NavbarHome() {
     const navigate = useNavigate();
     const { profile, isLoggedIn, isLoading, requireLogin, logout } = useAuth();
+    const { cartItemCount } = useCart();
 
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
     const [selectedCategories, setSelectedCategories] = useState([]);
-    const [activeNotificationTab, setActiveNotificationTab] = useState("pesanan");
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
@@ -180,24 +180,6 @@ export default function NavbarHome() {
             return;
         }
         navigate("/cart");
-        setIsMobileMenuOpen(false);
-    };
-
-    const handleTitipJual = () => {
-        if (!isLoggedIn) {
-            requireLogin("fitur Titip Jual");
-            return;
-        }
-        navigate("/titip-jual");
-        setIsMobileMenuOpen(false);
-    };
-
-    const handleCekOngkir = () => {
-        if (!isLoggedIn) {
-            requireLogin("fitur Cek Ongkir");
-            return;
-        }
-        navigate("/cek-ongkir");
         setIsMobileMenuOpen(false);
     };
 
@@ -467,14 +449,19 @@ export default function NavbarHome() {
                     {/* Desktop Icons */}
                     <div className="hidden md:flex items-center gap-3 relative" ref={profileRef}>
                         <Button
-                        onClick={handlecart}
-                            className="p-2 hover:bg-primary-foreground/10 rounded-md transition-colors cursor-pointer"
+                            onClick={handlecart}
+                            className="p-2 hover:bg-primary-foreground/10 rounded-md transition-colors cursor-pointer relative"
                             aria-label="Shopping cart"
                         >
                             <ShoppingCart size={18} />
+                            {cartItemCount > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                                    {cartItemCount}
+                                </span>
+                            )}
                         </Button>
                         <Button
-                        onClick={handleWishlist}
+                            onClick={handleWishlist}
                             className="p-2 hover:bg-primary-foreground/10 rounded-md transition-colors cursor-pointer"
                             aria-label="Wishlist"
                         >
@@ -561,7 +548,7 @@ export default function NavbarHome() {
                                                 </Button>
                                                 <Button
                                                     onClick={() => {
-                                                        navigate("/titip-jual");
+                                                        navigate("/purchase-history");
                                                         setIsProfileDropdownOpen(false);
                                                     }}
                                                     className="cursor-pointer w-full justify-start px-4 py-3 text-left hover:bg-green-50 text-sm transition-all duration-200"
@@ -569,24 +556,9 @@ export default function NavbarHome() {
                                                 >
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-6 h-6 rounded-lg bg-green-100 flex items-center justify-center">
-                                                            <ShoppingBag size={14} className="text-green-600" />
+                                                            <Clock size={14} className="text-green-600" />
                                                         </div>
-                                                        <span className="text-gray-700">Titip Jual</span>
-                                                    </div>
-                                                </Button>
-                                                <Button
-                                                    onClick={() => {
-                                                        navigate("/cek-ongkir");
-                                                        setIsProfileDropdownOpen(false);
-                                                    }}
-                                                    className="cursor-pointer w-full justify-start px-4 py-3 text-left hover:bg-orange-50 text-sm transition-all duration-200"
-                                                    variant="ghost"
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-6 h-6 rounded-lg bg-orange-100 flex items-center justify-center">
-                                                            <Truck size={14} className="text-orange-600" />
-                                                        </div>
-                                                        <span className="text-gray-700">Cek Ongkir</span>
+                                                        <span className="text-gray-700">Riwayat Pembelian</span>
                                                     </div>
                                                 </Button>
                                             </div>
@@ -627,11 +599,16 @@ export default function NavbarHome() {
                             <Search size={18} />
                         </Button>
                         <Button
-                        onClick={handlecart}
-                            className="p-1.5 hover:bg-primary-foreground/10 rounded-md transition-colors cursor-pointer"
+                            onClick={handlecart}
+                            className="p-1.5 hover:bg-primary-foreground/10 rounded-md transition-colors cursor-pointer relative"
                             aria-label="Shopping cart"
                         >
                             <ShoppingCart size={18} />
+                            {cartItemCount > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                                    {cartItemCount}
+                                </span>
+                            )}
                         </Button>
                         <Button
                             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -688,7 +665,7 @@ export default function NavbarHome() {
                                 </div>
                             </form>
                         </div>
-                        <div className="p-4 space-y-4 max-h-[65vh] overflow-y-auto pb-[70px]">
+                        <div className="p-4 space-y-4 max-h-[65vh] overflow-y-auto pb-17.5">
                             <div>
                                 <div className="flex items-center justify-between mb-2">
                                     <h3 className="font-semibold text-sm text-gray-800">Filter Kategori</h3>
@@ -868,20 +845,6 @@ export default function NavbarHome() {
                                 >
                                     <span className="text-sm">Wishlist</span>
                                 </Button>
-                                <Button
-                                    onClick={handleTitipJual}
-                                    className="w-full justify-start gap-3 p-2 hover:text-blue-500 hover:bg-gray-300 rounded-md transition-colors cursor-pointer text-black"
-                                    variant="ghost"
-                                >
-                                    <span className="text-sm">Titip Jual</span>
-                                </Button>
-                                <Button
-                                    onClick={handleCekOngkir}
-                                    className="w-full justify-start gap-3 p-2 hover:text-blue-500 hover:bg-gray-300 rounded-md transition-colors cursor-pointer text-black"
-                                    variant="ghost"
-                                >
-                                    <span className="text-sm">Cek Ongkir</span>
-                                </Button>
                                 <div className="p-3 mb-3">
                                     <div className="flex items-center justify-between mb-2">
                                         <h3 className="font-semibold text-sm text-black">Notifikasi</h3>
@@ -895,32 +858,9 @@ export default function NavbarHome() {
                                             <ArrowRight size={14} />
                                         </Button>
                                     </div>
-                                    <div className="flex gap-2 mb-3">
-                                        <Button
-                                            onClick={() => setActiveNotificationTab("pesanan")}
-                                            className={`cursor-pointer flex-1 py-1.5 text-xs font-medium transition-all duration-300 ease-in-out transform ${activeNotificationTab === "pesanan"
-                                                ? "bg-black text-white scale-[1.02] shadow-md"
-                                                : "bg-gray-50 text-gray-700 hover:bg-gray-100 hover:scale-[1.01] hover:shadow-sm active:scale-[0.99]"
-                                                }`}
-                                        >
-                                            Pesanan
-                                        </Button>
-                                        <Button
-                                            onClick={() => setActiveNotificationTab("pengajuan")}
-                                            className={`cursor-pointer flex-1 py-1.5 text-xs font-medium transition-all duration-300 ease-in-out transform ${activeNotificationTab === "pengajuan"
-                                                ? "bg-black text-white scale-[1.02] shadow-md"
-                                                : "bg-gray-50 text-gray-700 hover:bg-gray-100 hover:scale-[1.01] hover:shadow-sm active:scale-[0.99]"
-                                                }`}
-                                        >
-                                            Pengajuan
-                                        </Button>
-                                    </div>
                                     <div className="space-y-5 mb-3 border-b">
-                                        {activeNotificationTab === "pesanan" ? (
-                                            <div className="text-center py-3 text-gray-500 text-xs">Tidak ada notifikasi pesanan</div>
-                                        ) : (
-                                            <div className="text-center py-3 text-gray-500 text-xs">Tidak ada notifikasi pengajuan</div>
-                                        )}
+                                        <div className="text-center py-3 text-gray-500 text-xs">Tidak ada notifikasi pesanan</div>
+
                                     </div>
                                     <div className="flex gap-2 mt-3">
                                         <Button

@@ -113,10 +113,10 @@ export default function PaymentQris() {
     }
 
     return (
-        <div className="min-h-screen bg-linear-to-b from-yellow-50 to-yellow-100 py-8 px-4">
+        <div className="min-h-screen bg-linear-to-b from-blue-50 to-blue-100 py-8 px-4">
             <div className="max-w-md mx-auto">
-                <div className="bg-white rounded-2xl shadow-xl overflow-hidden border-2 border-yellow-300">
-                    <div className="bg-yellow-500 py-5 text-center">
+                <div className="bg-white rounded-2xl shadow-xl overflow-hidden border-2 ">
+                    <div className="bg-gray-900 py-5 text-center">
                         <h1 className="text-2xl font-bold text-white tracking-wide">Bayar dengan QRIS</h1>
                     </div>
                     <div className="p-6">
@@ -125,7 +125,7 @@ export default function PaymentQris() {
                             <p className="font-mono text-lg font-bold text-yellow-700 mt-1">{orderId}</p>
                         </div>
                         <div className="flex justify-center mb-8">
-                            <div className="p-4 bg-gray-50 rounded-xl border border-yellow-200">
+                            <div className="p-4 bg-gray-50 rounded-xl border border-gray-900">
                                 <img
                                     src={qrCodeData}
                                     alt="QRIS Code"
@@ -136,7 +136,7 @@ export default function PaymentQris() {
                                 />
                             </div>
                         </div>
-                        <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded-r-lg p-4 mb-6">
+                        <div className="bg-yellow-50 border-l-4 border-gray-900 rounded-r-lg p-4 mb-6">
                             <p className="font-bold text-yellow-800 mb-2">Instruksi Pembayaran:</p>
                             <ol className="list-decimal list-inside space-y-1 text-sm text-gray-700 pl-2">
                                 <li>Buka aplikasi e-wallet </li>

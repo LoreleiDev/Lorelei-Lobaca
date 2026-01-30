@@ -3,6 +3,7 @@ import "./bootstrap";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { CartProvider } from './hooks/UseCart';
 
 import NotFound from "./components/error/404";
 
@@ -26,6 +27,7 @@ import PaymentSelector from "./components/ui/Pembayaran";
 import AddressCourierSelector from "./components/ui/AlamatKurir";
 import PaymentQris from "./components/PaymentQris";
 import DetailTransaksiPage from "./components/DetailTransaksi";
+import RiwayatPesanan from "./components/RiwayatPesanan";
 
 import AdminLogin from "./components/admin/LoginAdmin";
 import AdminDashboard from "./components/admin/Dashboard";
@@ -40,45 +42,49 @@ import AdminPesananPage from "./components/admin/KelolaPesanan";
 ReactDOM.createRoot(document.getElementById("app")).render(
     <React.StrictMode>
         <BrowserRouter>
-            <Routes>
-                {/* === PUBLIC ROUTES === */}
-                <Route path="/register" element={<Register />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/password/forgot" element={<ForgotPassword />} />
-                <Route path="*" element={<NotFound />} />
+            <CartProvider>
+                <Routes>
+                    {/* === PUBLIC ROUTES === */}
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/password/forgot" element={<ForgotPassword />} />
+                    <Route path="*" element={<NotFound />} />
 
-                <Route index element={<Home />} />
-                <Route path="/buku" element={<Buku />} />
-                <Route path="/search" element={<Search />} />
-                <Route path="/buku/:id" element={<BukuDetail />} />
-                <Route path="/wishlist" element={<WishlistPage />} />
-                <Route path="/promo" element={<PromoPage />} />
-                <Route path="/promo/:id" element={<PromoDetailPage />} />
-                <Route path="/cart" element={<KeranjangPage />} />
-                <Route path="/payment" element={<PaymentSelector />} />
-                <Route path="/alamat-kurir" element={<AddressCourierSelector />} />
-                <Route path="/payment-qris" element={<PaymentQris />} />
-                <Route path="/transaksi" element={<DetailTransaksiPage />} />
+                    <Route index element={<Home />} />
+                    <Route path="/buku" element={<Buku />} />
+                    <Route path="/search" element={<Search />} />
+                    <Route path="/buku/:id" element={<BukuDetail />} />
+                    <Route path="/wishlist" element={<WishlistPage />} />
+                    <Route path="/promo" element={<PromoPage />} />
+                    <Route path="/promo/:id" element={<PromoDetailPage />} />
+                    <Route path="/cart" element={<KeranjangPage />} />
+                    <Route path="/payment" element={<PaymentSelector />} />
+                    <Route path="/alamat-kurir" element={<AddressCourierSelector />} />
+                    <Route path="/payment-qris" element={<PaymentQris />} />
+                    <Route path="/transaksi" element={<DetailTransaksiPage />} />
+                    <Route path="/purchase-history" element={<RiwayatPesanan />} />
 
-                {/* === USER PROTECTED ROUTES === */}
-                <Route element={<UserRoute />}>
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/password/edit" element={<EditPassword />} />
-                    <Route path="/email/edit" element={<ChangeEmail />} />
-                </Route>
+                    {/* === USER PROTECTED ROUTES === */}
+                    <Route element={<UserRoute />}>
+                        <Route path="/profile" element={<Profile />} />
+                        <Route path="/password/edit" element={<EditPassword />} />
+                        <Route path="/email/edit" element={<ChangeEmail />} />
+                    </Route>
 
-                {/* === ADMIN ROUTES === */}
-                <Route path="/admin/login" element={<AdminLogin />} />
-                <Route element={<AdminRoute />}>
-                    <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                    <Route path="/admin/upload" element={<AdminUpload />} />
-                    <Route path="/admin/inventory" element={<AdminInventory />} />
-                    <Route path="/admin/inventory/:id" element={<AdminEditInventory />} />
-                    <Route path="/admin/promo" element={<AdminPromoSetting />} />
-                    <Route path="/admin/ulasan" element={<AdminUlasanPage />} />
-                    <Route path="/admin/pesanan" element={<AdminPesananPage />} />
-                </Route>
-            </Routes>
+
+                    {/* === ADMIN ROUTES === */}
+                    <Route path="/admin/login" element={<AdminLogin />} />
+                    <Route element={<AdminRoute />}>
+                        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                        <Route path="/admin/upload" element={<AdminUpload />} />
+                        <Route path="/admin/inventory" element={<AdminInventory />} />
+                        <Route path="/admin/inventory/:id" element={<AdminEditInventory />} />
+                        <Route path="/admin/promo" element={<AdminPromoSetting />} />
+                        <Route path="/admin/ulasan" element={<AdminUlasanPage />} />
+                        <Route path="/admin/pesanan" element={<AdminPesananPage />} />
+                    </Route>
+                </Routes>
+            </CartProvider>
         </BrowserRouter>
     </React.StrictMode>
 );
