@@ -4,8 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Transaksi;
-use App\Models\TransaksiDetail;
-use App\Models\Buku;
 use App\Models\Promo;
 use Carbon\Carbon;
 use Illuminate\Http\Request;

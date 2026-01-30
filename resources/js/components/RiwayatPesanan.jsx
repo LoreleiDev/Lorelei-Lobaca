@@ -45,35 +45,35 @@ export default function OrderHistory() {
 
     const statusConfig = {
         'transaksi-diproses': {
-            label: 'Diproses',
+            label: 'Pembayaran Diproses',
             color: 'bg-blue-50',
             textColor: 'text-blue-700',
             borderColor: 'border-blue-200',
             icon: <Clock className="w-4 h-4" />
         },
         'transaksi-sukses': {
-            label: 'Berhasil',
+            label: 'Pembayaran Berhasil',
             color: 'bg-green-50',
             textColor: 'text-green-700',
             borderColor: 'border-green-200',
             icon: <CheckCircle className="w-4 h-4" />
         },
         'transaksi-dibatalkan': {
-            label: 'Dibatalkan',
+            label: 'Pembayaran Dibatalkan',
             color: 'bg-red-50',
             textColor: 'text-red-700',
             borderColor: 'border-red-200',
             icon: <XCircle className="w-4 h-4" />
         },
         'transaksi-kadaluarsa': {
-            label: 'Kadaluarsa',
+            label: 'Pembayaran Kadaluarsa',
             color: 'bg-gray-50',
             textColor: 'text-gray-700',
             borderColor: 'border-gray-200',
             icon: <AlertCircle className="w-4 h-4" />
         },
         'transaksi-ditolak': {
-            label: 'Ditolak',
+            label: 'Pembayaran Ditolak',
             color: 'bg-red-50',
             textColor: 'text-red-700',
             borderColor: 'border-red-200',
