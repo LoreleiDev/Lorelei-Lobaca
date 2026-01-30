@@ -62,7 +62,7 @@ export default function PaymentQris() {
 
     if (paymentStatus === 'success') {
         return (
-            <div className="min-h-screen bg-linear-to-b from-yellow-50 to-yellow-100 py-8 px-4">
+            <div className="min-h-screen bg-linear-to-b from-blue-50 to-blue-100 py-8 px-4">
                 <div className="max-w-md mx-auto">
                     <div className="bg-white rounded-2xl shadow-xl p-8 text-center border-2 border-yellow-300">
                         <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -88,7 +88,7 @@ export default function PaymentQris() {
 
     if (paymentStatus === 'failed') {
         return (
-            <div className="min-h-screen bg-linear-to-b from-yellow-50 to-yellow-100 py-8 px-4">
+            <div className="min-h-screen bg-linear-to-b from-blue-50 to-blue-100 py-8 px-4">
                 <div className="max-w-md mx-auto">
                     <div className="bg-white rounded-2xl shadow-xl p-8 text-center border-2 border-yellow-300">
                         <div className="w-20 h-20 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
