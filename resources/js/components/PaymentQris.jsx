@@ -64,7 +64,7 @@ export default function PaymentQris() {
         return (
             <div className="min-h-screen bg-linear-to-b from-blue-50 to-blue-100 py-8 px-4">
                 <div className="max-w-md mx-auto">
-                    <div className="bg-white rounded-2xl shadow-xl p-8 text-center border-2 border-yellow-300">
+                    <div className="bg-white rounded-2xl shadow-xl p-8 text-center ">
                         <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
@@ -90,7 +90,7 @@ export default function PaymentQris() {
         return (
             <div className="min-h-screen bg-linear-to-b from-blue-50 to-blue-100 py-8 px-4">
                 <div className="max-w-md mx-auto">
-                    <div className="bg-white rounded-2xl shadow-xl p-8 text-center border-2 border-yellow-300">
+                    <div className="bg-white rounded-2xl shadow-xl p-8 text-center ">
                         <div className="w-20 h-20 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
