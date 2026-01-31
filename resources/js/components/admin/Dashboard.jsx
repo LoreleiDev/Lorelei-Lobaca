@@ -216,7 +216,7 @@ export default function Dashboard() {
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {/* Total Pendapatan */}
-                    <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
+                    <div className="bg-linear-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-green-100 mb-1">Total Pendapatan</p>
@@ -232,7 +232,7 @@ export default function Dashboard() {
                     </div>
 
                     {/* Buku Terjual */}
-                    <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
+                    <div className="bg-linear-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-purple-100 mb-1">Buku Terjual</p>
@@ -248,7 +248,7 @@ export default function Dashboard() {
                     </div>
 
                     {/* Pesanan Pending */}
-                    <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl shadow-lg p-6 text-white">
+                    <div className="bg-linear-to-br from-yellow-500 to-yellow-600 rounded-xl shadow-lg p-6 text-white">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-yellow-100 mb-1">Pesanan Pending</p>
@@ -264,7 +264,7 @@ export default function Dashboard() {
                     </div>
 
                     {/* Pesanan Hari Ini */}
-                    <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
+                    <div className="bg-linear-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-blue-100 mb-1">Pesanan Hari Ini</p>
@@ -297,7 +297,7 @@ export default function Dashboard() {
                                 <option value="yearly">Tahunan</option>
                             </select>
                         </div>
-                        <div className="h-[320px] w-full">
+                        <div className="h-80 w-full">
                             {chartLoading ? (
                                 <div className="flex items-center justify-center h-full">
                                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
@@ -358,7 +358,7 @@ export default function Dashboard() {
                     {/* Status Pie Chart */}
                     <div className="bg-white rounded-xl shadow p-6">
                         <h2 className="text-lg font-semibold text-gray-700 mb-4">Distribusi Status Pesanan</h2>
-                        <div className="h-[320px] w-full flex items-center justify-center">
+                        <div className="h-80 w-full flex items-center justify-center">
                             {chartLoading ? (
                                 <div className="flex items-center justify-center h-full">
                                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
