@@ -14,56 +14,66 @@ use App\Mail\OrderRejectedNotification;
 class TransaksiController extends Controller
 {
     public function index(Request $request)
-    {
-        Log::info('Admin Orders Index Called', ['query_params' => $request->all()]);
-        $query = Transaksi::with(['user:id,first_name,last_name,email', 'transaksiDetail.buku']);
+{
+    Log::info('Admin Orders Index Called', ['query_params' => $request->all()]);
+    $query = Transaksi::with(['user:id,first_name,last_name,email', 'transaksiDetail.buku']);
 
-        $status = $request->query('status');
-        if ($status) {
-            Log::info('Filtering by status', ['status' => $status]);
-            $query->where('admin_action_status', $status);
-        }
-
-        $startDate = $request->query('start_date');
-        $endDate = $request->query('end_date');
-        if ($startDate && $endDate) {
-            Log::info('Filtering by date range', ['start' => $startDate, 'end' => $endDate]);
-            $query->whereBetween('created_at', [$startDate, $endDate]);
-        } elseif ($timeRange = $request->query('time_range')) {
-            Log::info('Filtering by time range', ['range' => $timeRange]);
-            switch ($timeRange) {
-                case 'daily':
-                    $query->whereDate('created_at', today());
-                    break;
-                case 'weekly':
-                    $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
-                    break;
-                case 'monthly':
-                    $query->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year);
-                    break;
-                case 'yearly':
-                    $query->whereYear('created_at', now()->year);
-                    break;
-                default:
-                    Log::warning('Invalid time_range parameter', ['time_range' => $timeRange]);
-            }
-        }
-
-        $transaksi = $query->orderBy('created_at', 'desc')->get()->map(function ($t) {
-            if ($t->user) {
-                $t->user->name = trim($t->user->first_name . ' ' . $t->user->last_name);
-            }
-            return $t;
-        });
-
-        $totalPendapatan = $transaksi->whereIn('admin_action_status', ['approved', 'shipped'])->sum('total_harga');
-
-        return response()->json([
-            'success' => true,
-            'data' => $transaksi,
-            'total_pendapatan' => $totalPendapatan
-        ]);
+    $status = $request->query('status');
+    if ($status) {
+        Log::info('Filtering by status', ['status' => $status]);
+        $query->where('admin_action_status', $status);
     }
+
+    $startDate = $request->query('start_date');
+    $endDate = $request->query('end_date');
+    if ($startDate && $endDate) {
+        Log::info('Filtering by date range', ['start' => $startDate, 'end' => $endDate]);
+        $query->whereBetween('created_at', [$startDate, $endDate]);
+    } elseif ($timeRange = $request->query('time_range')) {
+        Log::info('Filtering by time range', ['range' => $timeRange]);
+        switch ($timeRange) {
+            case 'daily':
+                $query->whereDate('created_at', today());
+                break;
+            case 'weekly':
+                $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
+                break;
+            case 'monthly':
+                $query->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year);
+                break;
+            case 'yearly':
+                $query->whereYear('created_at', now()->year);
+                break;
+            default:
+                Log::warning('Invalid time_range parameter', ['time_range' => $timeRange]);
+        }
+    }
+
+    $transaksi = $query->orderBy('created_at', 'desc')->get()->map(function ($t) {
+        if ($t->user) {
+            $t->user->name = trim($t->user->first_name . ' ' . $t->user->last_name);
+        }
+        return $t;
+    });
+
+    $totalPendapatan = $transaksi->whereIn('admin_action_status', ['approved', 'shipped'])->sum('total_harga');
+    
+    $totalBukuTerjual = 0;
+    foreach ($transaksi as $t) {
+        if (in_array($t->admin_action_status, ['approved', 'shipped'])) {
+            if ($t->transaksiDetail) {
+                $totalBukuTerjual += $t->transaksiDetail->sum('jumlah');
+            }
+        }
+    }
+
+    return response()->json([
+        'success' => true,
+        'data' => $transaksi,
+        'total_pendapatan' => $totalPendapatan,
+        'total_buku_terjual' => $totalBukuTerjual
+    ]);
+}
 
     public function approve(Request $request, $id)
     {

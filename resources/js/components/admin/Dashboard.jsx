@@ -19,6 +19,7 @@ export default function Dashboard() {
     document.title = "Dashboard - Lobaca Admin";
     
     const [totalPendapatan, setTotalPendapatan] = useState(0);
+    const [totalBukuTerjual, setTotalBukuTerjual] = useState(0);
     const [loading, setLoading] = useState(true);
     const [timeRangeFilter, setTimeRangeFilter] = useState('monthly');
 
@@ -46,6 +47,7 @@ export default function Dashboard() {
             if (res.ok) {
                 const data = await res.json();
                 setTotalPendapatan(data.total_pendapatan || 0);
+                setTotalBukuTerjual(data.total_buku_terjual || 0);
             } else {
                 const error = await res.json().catch(() => ({ message: "Gagal memuat data." }));
                 Toast.fire({ icon: "error", title: error.message || "Gagal memuat data." });
@@ -121,8 +123,8 @@ export default function Dashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="bg-white rounded-lg shadow p-4">
                         <h3 className="text-sm font-medium text-gray-700 mb-2">Buku Terjual</h3>
-                        <p className="text-2xl font-bold text-purple-600">0</p>
-                        <p className="text-xs text-gray-500 mt-1">Belum ada data</p>
+                        <p className="text-2xl font-bold text-purple-600">{totalBukuTerjual.toLocaleString('id-ID')}</p>
+                        <p className="text-xs text-gray-500 mt-1">Total semua waktu</p>
                     </div>
                 </div>
             </div>
