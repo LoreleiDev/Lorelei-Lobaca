@@ -114,9 +114,15 @@ export function PromoForm({
 
     const handleDiscountChange = (index, discount) => {
         const updated = [...selectedBooks];
-        updated[index] = { ...updated[index], discount: parseInt(discount) || 0 };
+
+        updated[index] = {
+            ...updated[index],
+            discount: discount === "" ? "" : parseInt(discount, 10),
+        };
+
         setSelectedBooks(updated);
     };
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -372,7 +378,7 @@ export function PromoForm({
                                                         <div className="flex items-center gap-2">
                                                             <Input
                                                                 type="number"
-                                                                min="1"
+                                                                min="0"
                                                                 max="100"
                                                                 value={book.discount}
                                                                 onChange={(e) => handleDiscountChange(index, e.target.value)}

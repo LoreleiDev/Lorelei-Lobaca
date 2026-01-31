@@ -4,9 +4,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from './hooks/UseCart';
-
 import NotFound from "./components/error/404";
-
 import UserRoute from "./components/UserRoute";
 import Register from "./components/Register";
 import Login from "./components/Login";
@@ -15,7 +13,6 @@ import EditPassword from "./components/EditPassword";
 import ChangeEmail from "./components/ChangeEmail";
 import Home from "./components/Home";
 import Profile from "./components/Profile";
-
 import Buku from "./components/Buku";
 import Search from "./components/Search";
 import BukuDetail from "./components/BukuDetail";
@@ -29,10 +26,9 @@ import PaymentQris from "./components/PaymentQris";
 import DetailTransaksiPage from "./components/DetailTransaksi";
 import RiwayatPesanan from "./components/RiwayatPesanan";
 import Notifikasi from "./components/Notifikasi";
-
+import AdminRoute from "./components/admin/AdminRoutes";
 import AdminLogin from "./components/admin/LoginAdmin";
 import AdminDashboard from "./components/admin/Dashboard";
-import AdminRoute from "./components/admin/AdminRoutes";
 import AdminUpload from "./components/admin/Upload";
 import AdminInventory from "./components/admin/InventoryPages";
 import AdminEditInventory from "./components/admin/BookEditPages";
@@ -45,12 +41,9 @@ ReactDOM.createRoot(document.getElementById("app")).render(
         <BrowserRouter>
             <CartProvider>
                 <Routes>
-                    {/* === PUBLIC ROUTES === */}
                     <Route path="/register" element={<Register />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/password/forgot" element={<ForgotPassword />} />
-                    <Route path="*" element={<NotFound />} />
-
                     <Route index element={<Home />} />
                     <Route path="/buku" element={<Buku />} />
                     <Route path="/search" element={<Search />} />
@@ -65,16 +58,11 @@ ReactDOM.createRoot(document.getElementById("app")).render(
                     <Route path="/transaksi" element={<DetailTransaksiPage />} />
                     <Route path="/purchase-history" element={<RiwayatPesanan />} />
                     <Route path="/notifications" element={<Notifikasi />} />
-
-                    {/* === USER PROTECTED ROUTES === */}
                     <Route element={<UserRoute />}>
                         <Route path="/profile" element={<Profile />} />
                         <Route path="/password/edit" element={<EditPassword />} />
                         <Route path="/email/edit" element={<ChangeEmail />} />
                     </Route>
-
-
-                    {/* === ADMIN ROUTES === */}
                     <Route path="/admin/login" element={<AdminLogin />} />
                     <Route element={<AdminRoute />}>
                         <Route path="/admin/dashboard" element={<AdminDashboard />} />
@@ -85,6 +73,7 @@ ReactDOM.createRoot(document.getElementById("app")).render(
                         <Route path="/admin/ulasan" element={<AdminUlasanPage />} />
                         <Route path="/admin/pesanan" element={<AdminPesananPage />} />
                     </Route>
+                    <Route path="*" element={<NotFound />} />
                 </Routes>
             </CartProvider>
         </BrowserRouter>

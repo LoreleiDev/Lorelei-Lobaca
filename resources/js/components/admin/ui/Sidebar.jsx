@@ -5,7 +5,6 @@ import {
     Upload,
     Package,
     ShoppingCart,
-    Settings,
     LogOut,
     BookOpen,
     User,
@@ -23,7 +22,6 @@ const navItems = [
     { icon: Package, label: "Promo", href: "/admin/promo" },
     { icon: BookText, label: "Ulasan Pengguna", href: "/admin/ulasan" },
     { icon: ShoppingCart, label: "Pesanan", href: "/admin/pesanan" },
-    { icon: Settings, label: "Pengaturan", href: "/admin/settings" },
 ];
 
 export default function Sidebar({ children }) {

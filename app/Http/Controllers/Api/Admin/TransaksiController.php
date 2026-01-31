@@ -53,18 +53,10 @@ class TransaksiController extends Controller
             if ($t->user) {
                 $t->user->name = trim($t->user->first_name . ' ' . $t->user->last_name);
             }
-            $midtransStatus = $this->getMidtransStatus($t->transaction_id_midtrans);
-            $t->setAttribute('payment_status', $midtransStatus);
-
-            if ($midtransStatus === 'expire' && $t->status_transaksi !== 'transaksi-kadaluarsa') {
-                $t->update(['status_transaksi' => 'transaksi-kadaluarsa']);
-                $t->refresh();
-            }
-
             return $t;
         });
 
-        $totalPendapatan = $transaksi->where('admin_action_status', 'approved')->sum('total_harga');
+        $totalPendapatan = $transaksi->whereIn('admin_action_status', ['approved', 'shipped'])->sum('total_harga');
 
         return response()->json([
             'success' => true,

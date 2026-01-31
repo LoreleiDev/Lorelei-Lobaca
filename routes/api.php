@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\WishlistController;
 use App\Http\Controllers\Api\Admin\BookController;
 use App\Http\Controllers\Api\BookPublicController;
 use App\Http\Controllers\Api\RajaongkirController;
+use App\Http\Controllers\Api\Admin\OrderController;
 use App\Http\Controllers\Api\Admin\PromoController;
 use App\Http\Controllers\Api\PromoPublicController;
 use App\Http\Controllers\Api\OrderHistoryController;
@@ -114,4 +115,5 @@ Route::middleware(['api', 'auth:sanctum,admin', 'admin'])->prefix('admin')->grou
     Route::get('/orders', [App\Http\Controllers\Api\Admin\TransaksiController::class, 'index']);
     Route::post('/orders/{id}/approve', [App\Http\Controllers\Api\Admin\TransaksiController::class, 'approve']);
     Route::post('/orders/{id}/reject', [App\Http\Controllers\Api\Admin\TransaksiController::class, 'rejectAndRefund']);
+    Route::post('/orders/{id}/update-shipping', [OrderController::class, 'updateShipping']);
 });
