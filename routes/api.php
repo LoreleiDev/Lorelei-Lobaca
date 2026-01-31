@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\Admin\OrderController;
 use App\Http\Controllers\Api\Admin\PromoController;
 use App\Http\Controllers\Api\PromoPublicController;
 use App\Http\Controllers\Api\OrderHistoryController;
+use App\Http\Controllers\Api\Admin\DashboardController;
 use App\Http\Controllers\Api\TransactionStatusController;
 
 /*
@@ -116,4 +117,5 @@ Route::middleware(['api', 'auth:sanctum,admin', 'admin'])->prefix('admin')->grou
     Route::post('/orders/{id}/approve', [App\Http\Controllers\Api\Admin\TransaksiController::class, 'approve']);
     Route::post('/orders/{id}/reject', [App\Http\Controllers\Api\Admin\TransaksiController::class, 'rejectAndRefund']);
     Route::post('/orders/{id}/update-shipping', [OrderController::class, 'updateShipping']);
+    Route::get('/dashboard/stats', [DashboardController::class, 'getStats']);
 });
