@@ -255,6 +255,7 @@ export default function PesananPage() {
                             const paymentStatus = order.status_transaksi;
                             const isPaid = paymentStatus === 'transaksi-sukses';
                             const isUnpaid = paymentStatus === 'transaksi-diproses';
+                            const isReceived = paymentStatus === 'pesanan-telah-diterima';
 
                             return (
                                 <div key={order.transaksi_id} className="border rounded-lg p-4 shadow-sm bg-white">
@@ -266,13 +267,15 @@ export default function PesananPage() {
                                                     isPending ? 'text-yellow-600' :
                                                         isApproved ? 'text-green-600' :
                                                             isShipped ? 'text-blue-600' :
-                                                                'text-red-600'
+                                                                isReceived ? 'text-blue-600' :
+                                                                    'text-red-600'
                                                     }`}>
                                                     {isExpired ? 'Expired' :
                                                         isPending ? 'Menunggu' :
                                                             isApproved ? 'Diterima' :
                                                                 isShipped ? 'Dikirim' :
-                                                                    'Ditolak'}
+                                                                    isReceived ? 'Diterima' :
+                                                                        'Ditolak'}
                                                 </span>
                                             </p>
                                             {isShipped && (
@@ -282,7 +285,14 @@ export default function PesananPage() {
                                                     </span>
                                                 </p>
                                             )}
-                                            {!isExpired && !isShipped && (
+                                            {isReceived && (
+                                                <p className="text-xs text-gray-500">
+                                                    <span className="font-semibold text-blue-600">
+                                                        Resi: {order.resi_pengiriman || 'N/A'} | Tgl Terima: {order.tanggal_diterima ? new Date(order.tanggal_diterima).toLocaleDateString('id-ID') : 'N/A'}
+                                                    </span>
+                                                </p>
+                                            )}
+                                            {!isExpired && !isShipped && !isReceived && (
                                                 <p className="text-xs text-gray-500">
                                                     Status Pembayaran: <span className={`font-semibold ${isPaid ? 'text-green-600' : 'text-red-600'}`}>
                                                         {isPaid ? 'Sudah Dibayar' : 'Belum Dibayar'}
@@ -304,6 +314,8 @@ export default function PesananPage() {
 
                                             {isShipped ? (
                                                 <span className="text-xs text-blue-600 font-semibold">DIKIRIM</span>
+                                            ) : isReceived ? (
+                                                <span className="text-xs text-green-600 font-semibold">DITERIMA</span>
                                             ) : isExpired ? (
                                                 <span className="text-xs text-red-600 font-semibold">EXPIRED</span>
                                             ) : isRejected ? (
@@ -342,7 +354,7 @@ export default function PesananPage() {
                         })}
                     </div>
                 )}
-                
+
                 {/* Modal Detail Pesanan */}
                 {showDetailModal && selectedDetailOrder && (
                     <DetailPesananPopup

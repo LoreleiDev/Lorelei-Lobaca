@@ -26,7 +26,9 @@ import {
     CalendarDays,
     ChevronDown,
     RefreshCw,
-    DollarSign
+    DollarSign,
+    Mail,
+    MapPin
 } from 'lucide-react';
 
 export default function OrderHistory() {
@@ -43,6 +45,7 @@ export default function OrderHistory() {
     });
     const navigate = useNavigate();
 
+    // Status configuration dengan label yang benar dan status baru
     const statusConfig = {
         'transaksi-diproses': {
             label: 'Pesanan Diproses',
@@ -52,11 +55,25 @@ export default function OrderHistory() {
             icon: <Clock className="w-4 h-4" />
         },
         'transaksi-sukses': {
-            label: 'Pesanan Diproses',
-            color: 'bg-blue-50',
-            textColor: 'text-blue-700',
-            borderColor: 'border-blue-200',
-            icon: <Clock className="w-4 h-4" />
+            label: 'Pesanan Berhasil',
+            color: 'bg-green-50',
+            textColor: 'text-green-700',
+            borderColor: 'border-green-200',
+            icon: <CheckCircle className="w-4 h-4" />
+        },
+        'pesanan-sedang-dikirim': {
+            label: 'Sedang Dikirim',
+            color: 'bg-yellow-50',
+            textColor: 'text-yellow-700',
+            borderColor: 'border-yellow-200',
+            icon: <Truck className="w-4 h-4" />
+        },
+        'pesanan-telah-diterima': {
+            label: 'Telah Diterima',
+            color: 'bg-purple-50',
+            textColor: 'text-purple-700',
+            borderColor: 'border-purple-200',
+            icon: <CheckCircle className="w-4 h-4" />
         },
         'transaksi-dibatalkan': {
             label: 'Pesanan Dibatalkan',
@@ -212,13 +229,13 @@ export default function OrderHistory() {
         const statusLabel = Object.entries(statusConfig).find(([key]) => key === newStatus)?.[1]?.label;
 
         const result = await Swal.fire({
-            title: 'Ubah Status Pesanan?',
-            html: `Ubah status menjadi <b>${statusLabel}</b>?`,
+            title: 'Konfirmasi Penerimaan?',
+            html: `Apakah Anda sudah menerima pesanan ini?<br/><br/><small class="text-gray-500">Status akan berubah menjadi <b>${statusLabel}</b></small>`,
             icon: 'question',
             showCancelButton: true,
-            confirmButtonColor: '#2563eb',
+            confirmButtonColor: '#8b5cf6',
             cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Ya, Ubah',
+            confirmButtonText: 'Ya, Sudah Diterima',
             cancelButtonText: 'Batal'
         });
 
@@ -295,6 +312,17 @@ export default function OrderHistory() {
 
     const formatNumber = (number) => {
         return new Intl.NumberFormat('id-ID').format(number);
+    };
+
+    const formatDate = (dateString) => {
+        if (!dateString) return '-';
+        return new Date(dateString).toLocaleDateString('id-ID', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
     };
 
     const resetDateFilter = () => {
@@ -497,6 +525,36 @@ export default function OrderHistory() {
 
                                     {/* Transaction Content */}
                                     <div className="p-4">
+                                        {/* Shipping Info - Only show for "pesanan-sedang-dikirim" */}
+                                        {transaction.status_transaksi === 'pesanan-sedang-dikirim' && (
+                                            <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                                <h4 className="font-semibold text-yellow-800 mb-3 flex items-center gap-2">
+                                                    <Truck className="w-4 h-4" />
+                                                    Informasi Pengiriman
+                                                </h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                    <div>
+                                                        <p className="text-sm text-yellow-700 font-medium mb-1 flex items-center gap-2">
+                                                            <Calendar className="w-3.5 h-3.5" />
+                                                            Tanggal Dikirim
+                                                        </p>
+                                                        <p className="text-lg font-semibold text-yellow-900">
+                                                            {formatDate(transaction.tanggal_dikirim)}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm text-yellow-700 font-medium mb-1 flex items-center gap-2">
+                                                            <Mail className="w-3.5 h-3.5" />
+                                                            Nomor Resi
+                                                        </p>
+                                                        <p className="text-lg font-semibold text-yellow-900 break-all">
+                                                            {transaction.nomor_resi || '-'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {/* Summary Cards */}
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
                                             <div className="bg-gray-50 p-3 rounded border border-gray-200">
@@ -535,6 +593,17 @@ export default function OrderHistory() {
                                                     {transaction.kurir}
                                                 </p>
                                             </div>
+                                            {transaction.alamat_pengiriman && (
+                                                <div className="bg-gray-50 p-3 rounded border border-gray-200">
+                                                    <div className="flex items-center gap-2 text-gray-600 mb-1">
+                                                        <MapPin className="w-3.5 h-3.5" />
+                                                        <span className="text-xs font-medium">Alamat</span>
+                                                    </div>
+                                                    <p className="text-sm text-gray-700 line-clamp-2">
+                                                        {transaction.alamat_pengiriman}
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Items Preview */}
@@ -582,7 +651,9 @@ export default function OrderHistory() {
                                         {/* Action Buttons */}
                                         <div className="flex flex-wrap gap-2 justify-between items-center pt-4 border-t border-gray-200">
                                             <div className="flex flex-wrap gap-2">
-                                                {transaction.status_transaksi === 'transaksi-diproses' && (
+                                                {/* Tombol Batalkan Pesanan - hanya muncul jika status transaksi-sukses DAN admin_action_status approved */}
+                                                {transaction.status_transaksi === 'transaksi-sukses' && 
+                                                 transaction.admin_action_status === 'approved' && (
                                                     <button
                                                         className="bg-red-50 text-red-700 px-4 py-2 rounded-md font-medium hover:bg-red-100 transition-colors flex items-center gap-2 border border-red-200"
                                                         onClick={() => handleCancelOrder(transaction.transaksi_id)}
@@ -594,6 +665,18 @@ export default function OrderHistory() {
                                             </div>
 
                                             <div className="flex flex-wrap gap-2">
+                                                {/* Tombol "Pesanan Telah Diterima" - hanya untuk status pesanan-sedang-dikirim */}
+                                                {transaction.status_transaksi === 'pesanan-sedang-dikirim' && (
+                                                    <button
+                                                        className="bg-purple-50 text-purple-700 px-4 py-2 rounded-md font-medium hover:bg-purple-100 transition-colors flex items-center gap-2 border border-purple-200"
+                                                        onClick={() => handleUpdateStatus(transaction.transaksi_id, 'pesanan-telah-diterima')}
+                                                    >
+                                                        <CheckCircle className="w-4 h-4" />
+                                                        Pesanan Telah Diterima
+                                                    </button>
+                                                )}
+
+                                                {/* Tombol "Ubah Status" dropdown - hanya untuk status transaksi-sukses */}
                                                 {transaction.status_transaksi === 'transaksi-sukses' && (
                                                     <div className="relative group">
                                                         <button
@@ -602,10 +685,16 @@ export default function OrderHistory() {
                                                             <Edit className="w-4 h-4" />
                                                             Ubah Status
                                                         </button>
-                                                        <div className="absolute left-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-300 z-10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                                                        <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-300 z-10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                                                             <div className="py-1">
                                                                 {Object.entries(statusConfig)
-                                                                    .filter(([status]) => status !== 'transaksi-sukses')
+                                                                    .filter(([status]) => 
+                                                                        status !== 'transaksi-sukses' && 
+                                                                        status !== 'pesanan-telah-diterima' &&
+                                                                        status !== 'transaksi-dibatalkan' &&
+                                                                        status !== 'transaksi-kadaluarsa' &&
+                                                                        status !== 'transaksi-ditolak'
+                                                                    )
                                                                     .map(([status, config]) => (
                                                                         <button
                                                                             key={`status-option-${transaction.transaksi_id}-${status}`}

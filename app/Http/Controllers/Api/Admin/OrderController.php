@@ -79,6 +79,7 @@ class OrderController extends Controller
                     'transaksi_id' => $transaksi->transaksi_id,
                     'resi_pengiriman' => $transaksi->resi_pengiriman,
                     'tanggal_dikirim' => $transaksi->tanggal_dikirim,
+                    'tanggal_diterima' => $transaksi->tanggal_diterima,
                     'status_transaksi' => $transaksi->status_transaksi,
                     'admin_action_status' => $transaksi->admin_action_status
                 ]

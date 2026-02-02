@@ -91,9 +91,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{id}', [NotificationController::class, 'destroy']);
         Route::delete('/clear-read', [NotificationController::class, 'destroyAllRead']);
     });
-    });
+});
+// --- Order History Routes ---
+Route::middleware('auth:sanctum')->prefix('order-history')->group(function () {
+    Route::get('/', [OrderHistoryController::class, 'getUserTransactions']);
+    Route::get('/{transaksiId}', [OrderHistoryController::class, 'getTransactionDetails']);
+    Route::get('/filter/status', [OrderHistoryController::class, 'filterTransactionsByStatus']);
+    Route::post('/{transaksiId}/cancel', [OrderHistoryController::class, 'cancelOrder']);
+    Route::post('/{transaksiId}/update-status', [OrderHistoryController::class, 'updateStatus']);
+});
 
-    // --- Order History ---
+// --- Order History ---
 Route::middleware('auth:sanctum')->prefix('order-history')->group(function () {
     Route::get('/', [OrderHistoryController::class, 'getUserTransactions']);
     Route::get('/{transaksiId}', [OrderHistoryController::class, 'getTransactionDetails']);
