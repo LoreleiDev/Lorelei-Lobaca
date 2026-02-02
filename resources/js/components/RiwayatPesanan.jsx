@@ -22,7 +22,7 @@ import {
     User,
     BookOpen,
     X,
-    Edit,
+    Eye,
     CalendarDays,
     ChevronDown,
     RefreshCw,
@@ -651,21 +651,19 @@ export default function OrderHistory() {
                                         {/* Action Buttons */}
                                         <div className="flex flex-wrap gap-2 justify-between items-center pt-4 border-t border-gray-200">
                                             <div className="flex flex-wrap gap-2">
-                                                {/* Tombol Batalkan Pesanan - hanya muncul jika status transaksi-sukses DAN admin_action_status approved */}
-                                                {transaction.status_transaksi === 'transaksi-sukses' && 
-                                                 transaction.admin_action_status === 'approved' && (
-                                                    <button
-                                                        className="bg-red-50 text-red-700 px-4 py-2 rounded-md font-medium hover:bg-red-100 transition-colors flex items-center gap-2 border border-red-200"
-                                                        onClick={() => handleCancelOrder(transaction.transaksi_id)}
-                                                    >
-                                                        <X className="w-4 h-4" />
-                                                        Batalkan Pesanan
-                                                    </button>
-                                                )}
+                                                {transaction.status_transaksi === 'transaksi-sukses' &&
+                                                    transaction.admin_action_status === 'approved' && (
+                                                        <button
+                                                            className="bg-red-50 text-red-700 px-4 py-2 rounded-md font-medium hover:bg-red-100 transition-colors flex items-center gap-2 border border-red-200"
+                                                            onClick={() => handleCancelOrder(transaction.transaksi_id)}
+                                                        >
+                                                            <X className="w-4 h-4" />
+                                                            Batalkan Pesanan
+                                                        </button>
+                                                    )}
                                             </div>
 
                                             <div className="flex flex-wrap gap-2">
-                                                {/* Tombol "Pesanan Telah Diterima" - hanya untuk status pesanan-sedang-dikirim */}
                                                 {transaction.status_transaksi === 'pesanan-sedang-dikirim' && (
                                                     <button
                                                         className="bg-purple-50 text-purple-700 px-4 py-2 rounded-md font-medium hover:bg-purple-100 transition-colors flex items-center gap-2 border border-purple-200"
@@ -676,38 +674,18 @@ export default function OrderHistory() {
                                                     </button>
                                                 )}
 
-                                                {/* Tombol "Ubah Status" dropdown - hanya untuk status transaksi-sukses */}
-                                                {transaction.status_transaksi === 'transaksi-sukses' && (
-                                                    <div className="relative group">
-                                                        <button
-                                                            className="bg-blue-50 text-blue-700 px-4 py-2 rounded-md font-medium hover:bg-blue-100 transition-colors flex items-center gap-2 border border-blue-200"
-                                                        >
-                                                            <Edit className="w-4 h-4" />
-                                                            Ubah Status
-                                                        </button>
-                                                        <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-300 z-10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                                                            <div className="py-1">
-                                                                {Object.entries(statusConfig)
-                                                                    .filter(([status]) => 
-                                                                        status !== 'transaksi-sukses' && 
-                                                                        status !== 'pesanan-telah-diterima' &&
-                                                                        status !== 'transaksi-dibatalkan' &&
-                                                                        status !== 'transaksi-kadaluarsa' &&
-                                                                        status !== 'transaksi-ditolak'
-                                                                    )
-                                                                    .map(([status, config]) => (
-                                                                        <button
-                                                                            key={`status-option-${transaction.transaksi_id}-${status}`}
-                                                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                                                                            onClick={() => handleUpdateStatus(transaction.transaksi_id, status)}
-                                                                        >
-                                                                            {config.icon}
-                                                                            {config.label}
-                                                                        </button>
-                                                                    ))}
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                                {transaction.status_transaksi === 'transaksi-diproses' && (
+                                                    <button
+                                                        onClick={() => navigate('/payment-qris', {
+                                                            state: {
+                                                                orderId: transaction.order_id
+                                                            }
+                                                        })}
+                                                        className="bg-blue-50 text-blue-700 px-4 py-2 rounded-md font-medium hover:bg-blue-100 transition-colors flex items-center gap-2 border border-blue-200"
+                                                    >
+                                                        <Eye className="w-4 h-4" />
+                                                        Lihat Status Pembayaran
+                                                    </button>
                                                 )}
 
                                                 <button
