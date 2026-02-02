@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Models\Transaksi;
@@ -10,70 +9,73 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\OrderRejectedNotification;
+use App\Traits\Notifiable; 
 
 class TransaksiController extends Controller
 {
+    use Notifiable; 
+
     public function index(Request $request)
-{
-    Log::info('Admin Orders Index Called', ['query_params' => $request->all()]);
-    $query = Transaksi::with(['user:id,first_name,last_name,email', 'transaksiDetail.buku']);
+    {
+        Log::info('Admin Orders Index Called', ['query_params' => $request->all()]);
+        $query = Transaksi::with(['user:id,first_name,last_name,email', 'transaksiDetail.buku']);
 
-    $status = $request->query('status');
-    if ($status) {
-        Log::info('Filtering by status', ['status' => $status]);
-        $query->where('admin_action_status', $status);
-    }
-
-    $startDate = $request->query('start_date');
-    $endDate = $request->query('end_date');
-    if ($startDate && $endDate) {
-        Log::info('Filtering by date range', ['start' => $startDate, 'end' => $endDate]);
-        $query->whereBetween('created_at', [$startDate, $endDate]);
-    } elseif ($timeRange = $request->query('time_range')) {
-        Log::info('Filtering by time range', ['range' => $timeRange]);
-        switch ($timeRange) {
-            case 'daily':
-                $query->whereDate('created_at', today());
-                break;
-            case 'weekly':
-                $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
-                break;
-            case 'monthly':
-                $query->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year);
-                break;
-            case 'yearly':
-                $query->whereYear('created_at', now()->year);
-                break;
-            default:
-                Log::warning('Invalid time_range parameter', ['time_range' => $timeRange]);
+        $status = $request->query('status');
+        if ($status) {
+            Log::info('Filtering by status', ['status' => $status]);
+            $query->where('admin_action_status', $status);
         }
-    }
 
-    $transaksi = $query->orderBy('created_at', 'desc')->get()->map(function ($t) {
-        if ($t->user) {
-            $t->user->name = trim($t->user->first_name . ' ' . $t->user->last_name);
-        }
-        return $t;
-    });
-
-    $totalPendapatan = $transaksi->whereIn('admin_action_status', ['approved', 'shipped'])->sum('total_harga');
-    
-    $totalBukuTerjual = 0;
-    foreach ($transaksi as $t) {
-        if (in_array($t->admin_action_status, ['approved', 'shipped'])) {
-            if ($t->transaksiDetail) {
-                $totalBukuTerjual += $t->transaksiDetail->sum('jumlah');
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+        if ($startDate && $endDate) {
+            Log::info('Filtering by date range', ['start' => $startDate, 'end' => $endDate]);
+            $query->whereBetween('created_at', [$startDate, $endDate]);
+        } elseif ($timeRange = $request->query('time_range')) {
+            Log::info('Filtering by time range', ['range' => $timeRange]);
+            switch ($timeRange) {
+                case 'daily':
+                    $query->whereDate('created_at', today());
+                    break;
+                case 'weekly':
+                    $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
+                    break;
+                case 'monthly':
+                    $query->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year);
+                    break;
+                case 'yearly':
+                    $query->whereYear('created_at', now()->year);
+                    break;
+                default:
+                    Log::warning('Invalid time_range parameter', ['time_range' => $timeRange]);
             }
         }
-    }
 
-    return response()->json([
-        'success' => true,
-        'data' => $transaksi,
-        'total_pendapatan' => $totalPendapatan,
-        'total_buku_terjual' => $totalBukuTerjual
-    ]);
-}
+        $transaksi = $query->orderBy('created_at', 'desc')->get()->map(function ($t) {
+            if ($t->user) {
+                $t->user->name = trim($t->user->first_name . ' ' . $t->user->last_name);
+            }
+            return $t;
+        });
+
+        $totalPendapatan = $transaksi->whereIn('admin_action_status', ['approved', 'shipped'])->sum('total_harga');
+
+        $totalBukuTerjual = 0;
+        foreach ($transaksi as $t) {
+            if (in_array($t->admin_action_status, ['approved', 'shipped'])) {
+                if ($t->transaksiDetail) {
+                    $totalBukuTerjual += $t->transaksiDetail->sum('jumlah');
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $transaksi,
+            'total_pendapatan' => $totalPendapatan,
+            'total_buku_terjual' => $totalBukuTerjual
+        ]);
+    }
 
     public function approve(Request $request, $id)
     {
@@ -108,6 +110,17 @@ class TransaksiController extends Controller
 
             $this->reduceStock($transaksi->transaksi_id);
             DB::commit();
+
+            $this->sendOrderSuccessNotification(
+                $transaksi->user_id,
+                $transaksi->transaksi_id,
+                $transaksi->total_harga
+            );
+
+            Log::info('Notification sent for approved order', [
+                'order_id' => $transaksi->transaksi_id,
+                'user_id' => $transaksi->user_id
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -163,7 +176,6 @@ class TransaksiController extends Controller
 
             $this->restoreStock($transaksi->transaksi_id);
 
-            // Clear cart
             $cart = \App\Models\Cart::where('user_id', $transaksi->user_id)->first();
             if ($cart) {
                 \App\Models\CartItem::where('cart_id', $cart->cart_id)->delete();
@@ -173,6 +185,17 @@ class TransaksiController extends Controller
 
             DB::commit();
             Log::info('Transaction rejected and refunded successfully', ['order_id' => $id]);
+
+            $this->sendOrderCancelledNotification(
+                $transaksi->user_id,
+                $transaksi->transaksi_id,
+                'Dibatalkan oleh admin'
+            );
+
+            Log::info('Notification sent for cancelled order', [
+                'order_id' => $transaksi->transaksi_id,
+                'user_id' => $transaksi->user_id
+            ]);
 
             try {
                 Mail::to($transaksi->user->email)->send(new OrderRejectedNotification($transaksi, $transaksi->user));
@@ -190,11 +213,6 @@ class TransaksiController extends Controller
                 'data' => $transaksi
             ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Transaksi berhasil dibatalkan dan dana dikembalikan.',
-                'data' => $transaksi
-            ]);
         } catch (\Exception $e) {
             DB::rollback();
             Log::error('Reject & Refund Error: ' . $e->getMessage(), [

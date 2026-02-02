@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
+import axios from 'axios';
 import {
     Bell,
     BellRing,
@@ -7,19 +8,18 @@ import {
     XCircle,
     AlertCircle,
     Package,
-    ShoppingBag,
     CreditCard,
     Truck,
     Calendar,
     Clock,
-    ChevronRight,
     Filter,
     Check,
-    X,
     Trash2,
     Eye,
-    EyeOff
+    EyeOff,
+    RefreshCw
 } from 'lucide-react';
+import NavbarHome from './ui/NavbarHome';
 
 export default function Notifications() {
     const [notifications, setNotifications] = useState([]);
@@ -27,6 +27,7 @@ export default function Notifications() {
     const [loading, setLoading] = useState(true);
     const [activeFilter, setActiveFilter] = useState('all');
     const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
     const notificationTypes = {
         'order_processed': {
@@ -87,119 +88,92 @@ export default function Notifications() {
         }
     };
 
-    // Data contoh notifikasi (dummy data)
-    const dummyNotifications = [
-        {
-            id: 1,
-            type: 'order_success',
-            title: 'Pesanan Berhasil',
-            message: 'Pesanan #LOBACA-1769475524-3 telah berhasil diproses dan akan segera dikirim.',
-            orderId: 'LOBACA-1769475524-3',
-            date: '2026-01-27T07:58:00Z',
-            isRead: false,
-            data: { total: 68000 }
-        },
-        {
-            id: 2,
-            type: 'payment_success',
-            title: 'Pembayaran Berhasil',
-            message: 'Pembayaran untuk pesanan #LOBACA-1769475524-3 sebesar Rp 68.000 telah berhasil.',
-            orderId: 'LOBACA-1769475524-3',
-            date: '2026-01-27T07:55:00Z',
-            isRead: false,
-            data: { amount: 68000 }
-        },
-        {
-            id: 3,
-            type: 'order_processed',
-            title: 'Pesanan Diproses',
-            message: 'Pesanan #LOBACA-1769475524-3 sedang diproses oleh penjual.',
-            orderId: 'LOBACA-1769475524-3',
-            date: '2026-01-27T07:50:00Z',
-            isRead: true,
-            data: {}
-        },
-        {
-            id: 4,
-            type: 'shipping_update',
-            title: 'Update Pengiriman',
-            message: 'Pesanan #LOBACA-1769475524-3 sedang dalam pengiriman dengan kurir JNE.',
-            orderId: 'LOBACA-1769475524-3',
-            date: '2026-01-26T14:30:00Z',
-            isRead: true,
-            data: { courier: 'JNE' }
-        },
-        {
-            id: 5,
-            type: 'order_cancelled',
-            title: 'Pesanan Dibatalkan',
-            message: 'Pesanan #LOBACA-1769475524-1 telah dibatalkan.',
-            orderId: 'LOBACA-1769475524-1',
-            date: '2026-01-25T10:15:00Z',
-            isRead: true,
-            data: {}
-        },
-        {
-            id: 6,
-            type: 'payment_failed',
-            title: 'Pembayaran Gagal',
-            message: 'Pembayaran untuk pesanan #LOBACA-1769475524-2 gagal. Silakan coba lagi.',
-            orderId: 'LOBACA-1769475524-2',
-            date: '2026-01-24T16:45:00Z',
-            isRead: true,
-            data: {}
-        },
-        {
-            id: 7,
-            type: 'order_expired',
-            title: 'Pesanan Kadaluarsa',
-            message: 'Pesanan #LOBACA-1769475524-4 telah kadaluarsa karena tidak melakukan pembayaran.',
-            orderId: 'LOBACA-1769475524-4',
-            date: '2026-01-23T09:20:00Z',
-            isRead: true,
-            data: {}
-        }
-    ];
-
     useEffect(() => {
-        // Simulasi fetch notifikasi
-        setTimeout(() => {
-            setNotifications(dummyNotifications);
-            setFilteredNotifications(dummyNotifications);
-            setLoading(false);
-        }, 1000);
+        fetchNotifications();
     }, []);
 
     useEffect(() => {
         applyFilters();
     }, [activeFilter, showUnreadOnly, notifications]);
 
+    const fetchNotifications = async (showLoading = true) => {
+        try {
+            if (showLoading) setLoading(true);
+            else setRefreshing(true);
+            
+            const token = localStorage.getItem('user_token');
+
+            if (!token) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Tidak Terotentikasi',
+                    text: 'Silakan login terlebih dahulu'
+                });
+                setLoading(false);
+                setRefreshing(false);
+                return;
+            }
+
+            const response = await axios.get('/api/notifications', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (response.data.success) {
+                setNotifications(response.data.data);
+                setFilteredNotifications(response.data.data);
+            }
+        } catch (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal Memuat Notifikasi',
+                text: error.response?.data?.message || error.message || 'Terjadi kesalahan saat memuat notifikasi'
+            });
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
+
     const applyFilters = () => {
         let filtered = [...notifications];
 
-        // Filter by type
         if (activeFilter !== 'all') {
             filtered = filtered.filter(n => n.type === activeFilter);
         }
 
-        // Filter unread only
         if (showUnreadOnly) {
-            filtered = filtered.filter(n => !n.isRead);
+            filtered = filtered.filter(n => !n.is_read);
         }
 
-        // Sort by date (newest first)
-        filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
-        
+        filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         setFilteredNotifications(filtered);
     };
 
-    const markAsRead = (id) => {
-        setNotifications(prev => prev.map(n => 
-            n.id === id ? { ...n, isRead: true } : n
-        ));
+    const markAsRead = async (id) => {
+        try {
+            const token = localStorage.getItem('user_token');
+            
+            await axios.post(`/api/notifications/${id}/read`, {}, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
+                }
+            });
+
+            await fetchNotifications(false);
+        } catch (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal',
+                text: 'Gagal menandai notifikasi sebagai dibaca'
+            });
+        }
     };
 
-    const markAllAsRead = () => {
+    const markAllAsRead = async () => {
         Swal.fire({
             title: 'Tandai Semua Dibaca?',
             text: 'Semua notifikasi akan ditandai sebagai sudah dibaca.',
@@ -209,19 +183,37 @@ export default function Notifications() {
             cancelButtonColor: '#6b7280',
             confirmButtonText: 'Ya, Tandai Semua',
             cancelButtonText: 'Batal'
-        }).then((result) => {
+        }).then(async (result) => {
             if (result.isConfirmed) {
-                setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Berhasil',
-                    text: 'Semua notifikasi telah ditandai dibaca'
-                });
+                try {
+                    const token = localStorage.getItem('user_token');
+                    
+                    await axios.post('/api/notifications/mark-all-read', {}, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    await fetchNotifications(false);
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil',
+                        text: 'Semua notifikasi telah ditandai dibaca'
+                    });
+                } catch (error) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal',
+                        text: 'Gagal menandai semua notifikasi sebagai dibaca'
+                    });
+                }
             }
         });
     };
 
-    const deleteNotification = (id) => {
+    const deleteNotification = async (id) => {
         Swal.fire({
             title: 'Hapus Notifikasi?',
             text: 'Notifikasi ini akan dihapus secara permanen.',
@@ -231,20 +223,39 @@ export default function Notifications() {
             cancelButtonColor: '#6b7280',
             confirmButtonText: 'Ya, Hapus',
             cancelButtonText: 'Batal'
-        }).then((result) => {
+        }).then(async (result) => {
             if (result.isConfirmed) {
-                setNotifications(prev => prev.filter(n => n.id !== id));
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Berhasil',
-                    text: 'Notifikasi telah dihapus'
-                });
+                try {
+                    const token = localStorage.getItem('user_token');
+                    
+                    await axios.delete(`/api/notifications/${id}`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    await fetchNotifications(false);
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil',
+                        text: 'Notifikasi telah dihapus'
+                    });
+                } catch (error) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal',
+                        text: 'Gagal menghapus notifikasi'
+                    });
+                }
             }
         });
     };
 
-    const deleteAllRead = () => {
-        const readCount = notifications.filter(n => n.isRead).length;
+    const deleteAllRead = async () => {
+        const readCount = notifications.filter(n => n.is_read).length;
+
         if (readCount === 0) {
             Swal.fire({
                 icon: 'info',
@@ -263,19 +274,50 @@ export default function Notifications() {
             cancelButtonColor: '#6b7280',
             confirmButtonText: 'Ya, Hapus Semua',
             cancelButtonText: 'Batal'
-        }).then((result) => {
+        }).then(async (result) => {
             if (result.isConfirmed) {
-                setNotifications(prev => prev.filter(n => !n.isRead));
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Berhasil',
-                    text: 'Semua notifikasi yang sudah dibaca telah dihapus'
-                });
+                try {
+                    const token = localStorage.getItem('user_token');
+                    
+                    await axios.delete('/api/notifications/clear-read', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    await fetchNotifications(false);
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil',
+                        text: 'Semua notifikasi yang sudah dibaca telah dihapus'
+                    });
+                } catch (error) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal',
+                        text: 'Gagal menghapus notifikasi yang sudah dibaca'
+                    });
+                }
             }
         });
     };
 
-    const unreadCount = notifications.filter(n => !n.isRead).length;
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await fetchNotifications(false);
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Berhasil',
+            text: 'Notifikasi berhasil diperbarui',
+            timer: 1500,
+            showConfirmButton: false
+        });
+    };
+
+    const unreadCount = notifications.filter(n => !n.is_read).length;
 
     const getNotificationConfig = (type) => {
         return notificationTypes[type] || {
@@ -328,203 +370,195 @@ export default function Notifications() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 py-8 px-4">
-            <div className="max-w-4xl mx-auto">
-                {/* Header */}
-                <div className="text-center mb-10">
-                    <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-800 rounded-full mb-6 relative">
-                        <Bell className="w-10 h-10 text-white" />
-                        {unreadCount > 0 && (
-                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                                {unreadCount}
-                            </span>
-                        )}
-                    </div>
-                    <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
-                        Notifikasi
-                    </h1>
-                    <p className="text-gray-600">Kelola semua pemberitahuan Anda di satu tempat</p>
-                </div>
-
-                {/* Stats and Actions */}
-                <div className="flex flex-wrap justify-between items-center mb-8 gap-4">
-                    <div className="flex items-center gap-4">
-                        <div className="bg-white px-4 py-2 rounded-lg border border-gray-200">
-                            <span className="text-sm text-gray-600">Total: </span>
-                            <span className="font-semibold text-gray-800">{notifications.length}</span>
+        <>
+        <NavbarHome />
+            <div className="min-h-screen bg-gray-50 py-8 px-4">
+                <div className="max-w-4xl mx-auto">
+                    <div className="text-center mb-10">
+                        <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-800 rounded-full mb-6 relative">
+                            <Bell className="w-10 h-10 text-white" />
                         </div>
-                        <div className="bg-blue-50 px-4 py-2 rounded-lg border border-blue-200">
-                            <span className="text-sm text-blue-600">Belum Dibaca: </span>
-                            <span className="font-semibold text-blue-700">{unreadCount}</span>
+                        <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
+                            Notifikasi
+                        </h1>
+                        <p className="text-gray-600">Kelola semua pemberitahuan Anda di satu tempat</p>
+                    </div>
+
+                    <div className="flex flex-wrap justify-between items-center mb-8 gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-white px-4 py-2 rounded-lg border border-gray-200">
+                                <span className="text-sm text-gray-600">Total: </span>
+                                <span className="font-semibold text-gray-800">{notifications.length}</span>
+                            </div>
+                            <div className="bg-blue-50 px-4 py-2 rounded-lg border border-blue-200">
+                                <span className="text-sm text-blue-600">Belum Dibaca: </span>
+                                <span className="font-semibold text-blue-700">{unreadCount}</span>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-2">
-                        <button
-                            className="bg-gray-800 text-white px-4 py-2 rounded-md font-medium hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm"
-                            onClick={markAllAsRead}
-                            disabled={unreadCount === 0}
-                        >
-                            <Check className="w-4 h-4" />
-                            Tandai Semua Dibaca
-                        </button>
-                        <button
-                            className="bg-red-50 text-red-700 px-4 py-2 rounded-md font-medium hover:bg-red-100 transition-colors flex items-center gap-2 text-sm border border-red-200"
-                            onClick={deleteAllRead}
-                        >
-                            <Trash2 className="w-4 h-4" />
-                            Hapus Semua Dibaca
-                        </button>
-                    </div>
-                </div>
-
-                {/* Filters */}
-                <div className="mb-8 space-y-4">
-                    <div className="flex items-center gap-2 text-gray-600">
-                        <Filter className="w-4 h-4" />
-                        <span className="text-sm font-medium">Filter:</span>
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-2">
-                        <button
-                            className={`px-4 py-2 rounded-md font-medium transition-colors flex items-center gap-2 ${activeFilter === 'all'
-                                ? 'bg-gray-800 text-white'
-                                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-                                }`}
-                            onClick={() => setActiveFilter('all')}
-                        >
-                            Semua
-                        </button>
-                        
-                        {Object.entries(notificationTypes).map(([type, config]) => {
-                            const count = notifications.filter(n => n.type === type).length;
-                            if (count === 0) return null;
-                            
-                            return (
-                                <button
-                                    key={type}
-                                    className={`px-3 py-2 rounded-md font-medium transition-colors flex items-center gap-2 ${activeFilter === type
-                                        ? `${config.textColor} ${config.color} border ${config.borderColor}`
-                                        : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-300'
-                                        }`}
-                                    onClick={() => setActiveFilter(type)}
-                                >
-                                    {config.icon}
-                                    <span>{config.title}</span>
-                                    <span className={`px-1.5 py-0.5 text-xs rounded-full ${activeFilter === type ? 'bg-white/20' : 'bg-gray-100'}`}>
-                                        {count}
-                                    </span>
-                                </button>
-                            );
-                        })}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <button
-                            className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium transition-colors ${showUnreadOnly
-                                ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                                : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-300'
-                                }`}
-                            onClick={() => setShowUnreadOnly(!showUnreadOnly)}
-                        >
-                            {showUnreadOnly ? (
-                                <>
-                                    <EyeOff className="w-4 h-4" />
-                                    Sembunyikan Belum Dibaca
-                                </>
-                            ) : (
-                                <>
-                                    <Eye className="w-4 h-4" />
-                                    Tampilkan Belum Dibaca
-                                </>
-                            )}
-                        </button>
-                    </div>
-                </div>
-
-                {/* Notifications List */}
-                {filteredNotifications.length === 0 ? (
-                    <div className="text-center py-16 bg-white rounded-lg border border-gray-200">
-                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <BellRing className="w-8 h-8 text-gray-400" />
-                        </div>
-                        <h3 className="text-xl font-semibold text-gray-800 mb-3">Tidak ada notifikasi</h3>
-                        <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                            {activeFilter !== 'all' || showUnreadOnly
-                                ? 'Tidak ada notifikasi yang sesuai dengan filter Anda'
-                                : 'Semua pemberitahuan akan muncul di sini'}
-                        </p>
-                        {(activeFilter !== 'all' || showUnreadOnly) && (
+                        <div className="flex flex-wrap gap-2">
                             <button
-                                className="bg-gray-800 text-white px-6 py-2.5 rounded-md font-medium hover:bg-gray-700 transition-colors flex items-center gap-2 mx-auto"
-                                onClick={() => {
-                                    setActiveFilter('all');
-                                    setShowUnreadOnly(false);
-                                }}
+                                className="bg-gray-800 text-white px-4 py-2 rounded-md font-medium hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm"
+                                onClick={markAllAsRead}
+                                disabled={unreadCount === 0}
                             >
-                                Reset Filter
+                                <Check className="w-4 h-4" />
+                                Tandai Semua Dibaca
                             </button>
-                        )}
+                            <button
+                                className="bg-red-50 text-red-700 px-4 py-2 rounded-md font-medium hover:bg-red-100 transition-colors flex items-center gap-2 text-sm border border-red-200"
+                                onClick={deleteAllRead}
+                            >
+                                <Trash2 className="w-4 h-4" />
+                                Hapus Semua Dibaca
+                            </button>
+                            <button
+                                className={`bg-white text-gray-700 px-4 py-2 rounded-md font-medium hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm border border-gray-300 ${refreshing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                onClick={handleRefresh}
+                                disabled={refreshing}
+                            >
+                                <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+                                {refreshing ? 'Memuat...' : 'Refresh'}
+                            </button>
+                        </div>
                     </div>
-                ) : (
-                    <div className="space-y-4">
-                        {filteredNotifications.map((notification) => {
-                            const config = getNotificationConfig(notification.type);
-                            
-                            return (
-                                <div 
-                                    key={notification.id} 
-                                    className={`bg-white rounded-lg border ${notification.isRead ? 'border-gray-200' : 'border-blue-300 border-2'} hover:border-gray-300 transition-colors overflow-hidden`}
+
+                    <div className="mb-8 space-y-4">
+                        <div className="flex items-center gap-2 text-gray-600">
+                            <Filter className="w-4 h-4" />
+                            <span className="text-sm font-medium">Filter:</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                className={`px-4 py-2 rounded-md font-medium transition-colors flex items-center gap-2 ${activeFilter === 'all'
+                                    ? 'bg-gray-800 text-white'
+                                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                                    }`}
+                                onClick={() => setActiveFilter('all')}
+                            >
+                                Semua
+                            </button>
+                            {Object.entries(notificationTypes).map(([type, config]) => {
+                                const count = notifications.filter(n => n.type === type).length;
+                                if (count === 0) return null;
+                                return (
+                                    <button
+                                        key={type}
+                                        className={`px-3 py-2 rounded-md font-medium transition-colors flex items-center gap-2 ${activeFilter === type
+                                            ? `${config.textColor} ${config.color} border ${config.borderColor}`
+                                            : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-300'
+                                            }`}
+                                        onClick={() => setActiveFilter(type)}
+                                    >
+                                        {config.icon}
+                                        <span>{config.title}</span>
+                                        <span className={`px-1.5 py-0.5 text-xs rounded-full ${activeFilter === type ? 'bg-white/20' : 'bg-gray-100'}`}>
+                                            {count}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium transition-colors ${showUnreadOnly
+                                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                    : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-300'
+                                    }`}
+                                onClick={() => setShowUnreadOnly(!showUnreadOnly)}
+                            >
+                                {showUnreadOnly ? (
+                                    <>
+                                        <EyeOff className="w-4 h-4" />
+                                        Sembunyikan Belum Dibaca
+                                    </>
+                                ) : (
+                                    <>
+                                        <Eye className="w-4 h-4" />
+                                        Tampilkan Belum Dibaca
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+
+                    {filteredNotifications.length === 0 ? (
+                        <div className="text-center py-16 bg-white rounded-lg border border-gray-200">
+                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <BellRing className="w-8 h-8 text-gray-400" />
+                            </div>
+                            <h3 className="text-xl font-semibold text-gray-800 mb-3">Tidak ada notifikasi</h3>
+                            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                                {activeFilter !== 'all' || showUnreadOnly
+                                    ? 'Tidak ada notifikasi yang sesuai dengan filter Anda'
+                                    : 'Semua pemberitahuan akan muncul di sini'}
+                            </p>
+                            {(activeFilter !== 'all' || showUnreadOnly) && (
+                                <button
+                                    className="bg-gray-800 text-white px-6 py-2.5 rounded-md font-medium hover:bg-gray-700 transition-colors flex items-center gap-2 mx-auto"
+                                    onClick={() => {
+                                        setActiveFilter('all');
+                                        setShowUnreadOnly(false);
+                                    }}
                                 >
-                                    {/* Notification Header */}
-                                    <div className={`p-4 ${notification.isRead ? 'bg-white' : 'bg-blue-50'}`}>
-                                        <div className="flex justify-between items-start gap-4">
-                                            <div className="flex items-start gap-3 flex-1">
-                                                <div className={`p-2 rounded-lg ${config.color} ${config.textColor}`}>
-                                                    {config.icon}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex justify-between items-start gap-2">
-                                                        <div>
-                                                            <h3 className="font-semibold text-gray-800">
-                                                                {notification.title}
-                                                            </h3>
-                                                            <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
-                                                                <Calendar className="w-3 h-3" />
-                                                                <span>{formatDate(notification.date)}</span>
+                                    Reset Filter
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {filteredNotifications.map((notification) => {
+                                const config = getNotificationConfig(notification.type);
+                                return (
+                                    <div
+                                        key={notification.notification_id}
+                                        className={`bg-white rounded-lg border ${notification.is_read ? 'border-gray-200' : 'border-blue-300 border-2'} hover:border-gray-300 transition-colors overflow-hidden`}
+                                    >
+                                        <div className={`p-4 ${notification.is_read ? 'bg-white' : 'bg-blue-50'}`}>
+                                            <div className="flex justify-between items-start gap-4">
+                                                <div className="flex items-start gap-3 flex-1">
+                                                    <div className={`p-2 rounded-lg ${config.color} ${config.textColor}`}>
+                                                        {config.icon}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex justify-between items-start gap-2">
+                                                            <div>
+                                                                <h3 className="font-semibold text-gray-800">
+                                                                    {notification.title}
+                                                                </h3>
+                                                                <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
+                                                                    <Calendar className="w-3 h-3" />
+                                                                    <span>{formatDate(notification.created_at)}</span>
+                                                                </div>
                                                             </div>
+                                                            {!notification.is_read && (
+                                                                <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full whitespace-nowrap">
+                                                                    Baru
+                                                                </span>
+                                                            )}
                                                         </div>
-                                                        {!notification.isRead && (
-                                                            <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full whitespace-nowrap">
-                                                                Baru
-                                                            </span>
+                                                        <p className="text-gray-700 mt-2">
+                                                            {notification.message}
+                                                        </p>
+                                                        {notification.order_id && (
+                                                            <div className="mt-3">
+                                                                <span className="text-sm text-gray-600 font-medium">
+                                                                    Order ID:
+                                                                </span>
+                                                                <span className="text-sm text-gray-800 ml-2 font-semibold">
+                                                                    {notification.order_id}
+                                                                </span>
+                                                            </div>
                                                         )}
                                                     </div>
-                                                    
-                                                    <p className="text-gray-700 mt-2">
-                                                        {notification.message}
-                                                    </p>
-                                                    
-                                                    {notification.orderId && (
-                                                        <div className="mt-3">
-                                                            <span className="text-sm text-gray-600 font-medium">
-                                                                Order ID: 
-                                                            </span>
-                                                            <span className="text-sm text-gray-800 ml-2 font-semibold">
-                                                                {notification.orderId}
-                                                            </span>
-                                                        </div>
-                                                    )}
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Notification Actions */}
-                                        <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
+                                        <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 px-4 pb-4">
                                             <div className="flex items-center gap-2 text-sm text-gray-500">
                                                 <Clock className="w-3 h-3" />
                                                 <span>
-                                                    {new Date(notification.date).toLocaleDateString('id-ID', {
+                                                    {new Date(notification.created_at).toLocaleDateString('id-ID', {
                                                         year: 'numeric',
                                                         month: 'long',
                                                         day: 'numeric',
@@ -533,12 +567,11 @@ export default function Notifications() {
                                                     })}
                                                 </span>
                                             </div>
-                                            
                                             <div className="flex gap-2">
-                                                {!notification.isRead && (
+                                                {!notification.is_read && (
                                                     <button
                                                         className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-md text-sm font-medium hover:bg-blue-100 transition-colors flex items-center gap-2 border border-blue-200"
-                                                        onClick={() => markAsRead(notification.id)}
+                                                        onClick={() => markAsRead(notification.notification_id)}
                                                     >
                                                         <Check className="w-3 h-3" />
                                                         Tandai Dibaca
@@ -546,7 +579,7 @@ export default function Notifications() {
                                                 )}
                                                 <button
                                                     className="bg-red-50 text-red-700 px-3 py-1.5 rounded-md text-sm font-medium hover:bg-red-100 transition-colors flex items-center gap-2 border border-red-200"
-                                                    onClick={() => deleteNotification(notification.id)}
+                                                    onClick={() => deleteNotification(notification.notification_id)}
                                                 >
                                                     <Trash2 className="w-3 h-3" />
                                                     Hapus
@@ -554,12 +587,12 @@ export default function Notifications() {
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
             </div>
-        </div>
+        </>
     );
-};
+}

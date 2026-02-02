@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\RajaongkirController;
 use App\Http\Controllers\Api\Admin\OrderController;
 use App\Http\Controllers\Api\Admin\PromoController;
 use App\Http\Controllers\Api\PromoPublicController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\OrderHistoryController;
 use App\Http\Controllers\Api\Admin\DashboardController;
 use App\Http\Controllers\Api\TransactionStatusController;
@@ -82,6 +83,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/rajaongkir/sub-districts/{districtId}', [RajaongkirController::class, 'getSubDistricts']);
     // --- Status Transaksi ---
     Route::get('/transaction/{orderId}/status', [TransactionStatusController::class, 'show']);
+    // --- Notifikasi ---
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [NotificationController::class, 'index']);
+        Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+        Route::post('/{id}/read', [NotificationController::class, 'markAsRead']);
+        Route::delete('/{id}', [NotificationController::class, 'destroy']);
+        Route::delete('/clear-read', [NotificationController::class, 'destroyAllRead']);
+    });
     });
 
     // --- Order History ---
@@ -90,6 +99,7 @@ Route::middleware('auth:sanctum')->prefix('order-history')->group(function () {
     Route::get('/{transaksiId}', [OrderHistoryController::class, 'getTransactionDetails']);
     Route::get('/filter', [OrderHistoryController::class, 'filterTransactionsByStatus']);
 });
+
 
 Route::post('/checkout/notification', [CheckoutController::class, 'receiveNotification']);
 

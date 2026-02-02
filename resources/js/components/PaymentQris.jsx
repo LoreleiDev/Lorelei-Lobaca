@@ -76,7 +76,7 @@ export default function PaymentQris() {
                         </p>
                         <Button
                             onClick={() => navigate('/purchase-history')}
-                            className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+                            className="w-full cursor-pointer bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
                         >
                             Lihat Detail Transaksi
                         </Button>
@@ -102,7 +102,7 @@ export default function PaymentQris() {
                         </p>
                         <Button
                             onClick={() => navigate('/cart')}
-                            className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+                            className="w-full cursor-pointer bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
                         >
                             Kembali ke Keranjang
                         </Button>
