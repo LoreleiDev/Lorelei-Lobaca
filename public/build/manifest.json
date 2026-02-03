@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-CoH_2FZC.css",
+    "file": "assets/app-BwGkh6d2.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -9,23 +9,19 @@
     ]
   },
   "resources/js/app.jsx": {
-    "file": "assets/app-BkwPECgi.js",
+    "file": "assets/app-sizAvh63.js",
     "name": "app",
     "src": "resources/js/app.jsx",
     "isEntry": true,
     "css": [
-      "assets/app-CoH_2FZC.css"
+      "assets/app-BwGkh6d2.css"
     ],
     "assets": [
       "assets/Register-BG-CNZjroE_.webp",
       "assets/Login-BG-BNHqQhSz.webp",
       "assets/Forgot-BG-CzJ-YFsV.webp",
       "assets/Email-BG-CH1wFTmp.webp",
-      "assets/ovo-CMG4nPUb.webp",
-      "assets/dana-DbVvLVVJ.webp",
-      "assets/gopay-DlYh6aEe.webp",
-      "assets/spay-BeLNskSG.webp",
-      "assets/briva-Cc-jQr3V.webp",
+      "assets/qris-CXxbvy7W.svg",
       "assets/Admin-BG-B6rNSkqh.webp",
       "assets/logo-OhqeXEbi.webp"
     ]
@@ -50,28 +46,12 @@
     "file": "assets/Register-BG-CNZjroE_.webp",
     "src": "resources/js/assets/Register-BG.webp"
   },
-  "resources/js/assets/briva.webp": {
-    "file": "assets/briva-Cc-jQr3V.webp",
-    "src": "resources/js/assets/briva.webp"
-  },
-  "resources/js/assets/dana.webp": {
-    "file": "assets/dana-DbVvLVVJ.webp",
-    "src": "resources/js/assets/dana.webp"
-  },
-  "resources/js/assets/gopay.webp": {
-    "file": "assets/gopay-DlYh6aEe.webp",
-    "src": "resources/js/assets/gopay.webp"
-  },
   "resources/js/assets/logo.webp": {
     "file": "assets/logo-OhqeXEbi.webp",
     "src": "resources/js/assets/logo.webp"
   },
-  "resources/js/assets/ovo.webp": {
-    "file": "assets/ovo-CMG4nPUb.webp",
-    "src": "resources/js/assets/ovo.webp"
-  },
-  "resources/js/assets/spay.webp": {
-    "file": "assets/spay-BeLNskSG.webp",
-    "src": "resources/js/assets/spay.webp"
+  "resources/js/assets/qris.svg": {
+    "file": "assets/qris-CXxbvy7W.svg",
+    "src": "resources/js/assets/qris.svg"
   }
 }

@@ -71,59 +71,57 @@ export default function BannerCarousel() {
     }
 
     return (
-        <div className="relative w-full overflow-hidden py-6">
-            <div className="px-4 mx-auto">
-                <div
-                    className="relative w-full bg-white rounded-2xl overflow-hidden shadow-lg mx-auto"
-                    style={{ aspectRatio: '2030 / 350', maxWidth: '2030px' }}
-                    onMouseEnter={() => setIsPlaying(false)}
-                    onMouseLeave={() => setIsPlaying(true)}
-                    onTouchStart={handleTouchStart}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleTouchEnd}
-                >
-                    {banners.length > 0 && (
-                        <div className="absolute inset-0">
-                            <div
-                                className="absolute inset-0 cursor-pointer"
-                                onClick={() => handleBannerClick(banners[current].id)}
-                            >
-                                <img
-                                    src={banners[current].image}
-                                    alt={banners[current].name}
-                                    className="w-full h-full object-cover"
-                                    loading="lazy"
-                                    onError={(e) => {
-                                        e.target.style.display = 'none';
-                                    }}
-                                />
-                                <div className="absolute inset-0 bg-black/20" />
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <div className="bg-black/50 text-white px-4 py-2 rounded-lg opacity-0 hover:opacity-100 transition-opacity">
-                                        Klik untuk detail
-                                    </div>
+        <div className="relative w-full overflow-hidden">
+            <div
+                className="relative w-full bg-white  overflow-hidden shadow-lg mx-auto"
+                style={{ aspectRatio: '2030 / 350', maxWidth: '2030px' }}
+                onMouseEnter={() => setIsPlaying(false)}
+                onMouseLeave={() => setIsPlaying(true)}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+            >
+                {banners.length > 0 && (
+                    <div className="absolute inset-0">
+                        <div
+                            className="absolute inset-0 cursor-pointer"
+                            onClick={() => handleBannerClick(banners[current].id)}
+                        >
+                            <img
+                                src={banners[current].image}
+                                alt={banners[current].name}
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                                onError={(e) => {
+                                    e.target.style.display = 'none';
+                                }}
+                            />
+                            <div className="absolute inset-0 bg-black/20" />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="bg-black/50 text-white px-4 py-2 rounded-lg opacity-0 hover:opacity-100 transition-opacity">
+                                    Klik untuk detail
                                 </div>
                             </div>
                         </div>
-                    )}
-                </div>
-
-                {banners.length > 1 && (
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 z-20 flex gap-2 sm:gap-3">
-                        {banners.map((_, index) => (
-                            <button
-                                key={index}
-                                onClick={() => setCurrent(index)}
-                                className={`transition-all duration-300 cursor-pointer rounded-full ${index === current
-                                    ? "bg-yellow-600 w-8 sm:w-10 h-2 sm:h-2.5"
-                                    : "bg-yellow-300 hover:bg-yellow-400 w-2 sm:w-2.5 h-2 sm:h-2.5"
-                                    }`}
-                                aria-label={`Go to slide ${index + 1}`}
-                            />
-                        ))}
                     </div>
                 )}
             </div>
+
+            {banners.length > 1 && (
+                <div className="absolute bottom-1 left-1/2 -translate-x-1/2 z-20 flex gap-2 sm:gap-3">
+                    {banners.map((_, index) => (
+                        <button
+                            key={index}
+                            onClick={() => setCurrent(index)}
+                            className={`transition-all duration-300 cursor-pointer rounded-full ${index === current
+                                ? "bg-black w-8 sm:w-10 h-2 sm:h-2.5"
+                                : "bg-gray-500 hover:bg-gray-400 w-2 sm:w-2.5 h-2 sm:h-2.5"
+                                }`}
+                            aria-label={`Go to slide ${index + 1}`}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

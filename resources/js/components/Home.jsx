@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import AnimatedWave from "./ui/AnimatedWave";
 import BukuPromo from "./ui/BukuPromo";
 import BannerCarousel from "./ui/Carouselbanner";
 import DaftarBuku from "./ui/DaftarBuku";
@@ -37,12 +36,8 @@ export default function Home() {
     return (
         <>
             <main>
-                <div className="bg-linear-to-b from-[#1A1F71] to-violet-700">
+                <div className="bg-[#f8f5f0]">
                     <BannerCarousel />
-                    <AnimatedWave />
-                </div>
-                <div className="bg-linear-to-b from-[#E7B807] via-violet-700 to-[#1A1F71]">
-
                     <BukuPromo />
                     <DaftarBuku />
                     <Testimoni />

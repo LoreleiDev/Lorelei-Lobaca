@@ -85,7 +85,7 @@ export default function DaftarBuku() {
         <div className="py-3 md:py-4 px-3 sm:px-4">
             <div className="max-w-6xl mx-auto">
                 <h1
-                    className="mt-16 select-none text-center text-lg sm:text-xl md:text-2xl mb-4 md:mb-6 text-gray-200"
+                    className="mt-16 select-none text-center text-lg sm:text-xl md:text-2xl mb-4 md:mb-6 text-black"
                     style={{ fontFamily: "Rubik Mono One" }}
                 >
                     REKOMENDASI
@@ -182,7 +182,7 @@ export default function DaftarBuku() {
                 <div className="flex justify-center mt-6">
                     <Link
                         to="/buku"
-                        className="text-xs md:text-sm font-bold text-white hover:text-gray-300 transition-colors"
+                        className="text-xs md:text-sm font-bold text-black hover:text-gray-300 transition-colors"
                     >
                         Lihat Selengkapnya →
                     </Link>

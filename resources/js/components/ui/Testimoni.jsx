@@ -67,9 +67,9 @@ export default function Testimoni() {
 
     return (
         <>
-            <div className="min-h-screen flex flex-col items-center justify-center p-4">
+            <div className="min-h-screen flex flex-col items-center justify-center ">
                 <h1
-                    className="select-none text-center text-xl sm:text-2xl md:text-3xl mb-6 md:mb-10 text-gray-200"
+                    className="select-none text-center text-xl sm:text-2xl md:text-3xl mb-6 md:mb-10 text-black"
                     style={{ fontFamily: "Rubik Mono One" }}
                 >
                     TESTIMONI
