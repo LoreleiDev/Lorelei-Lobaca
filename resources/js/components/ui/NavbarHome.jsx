@@ -67,10 +67,28 @@ const overlayVariants = {
 export default function NavbarHome() {
     const navigate = useNavigate();
     const { profile, isLoggedIn, isLoading, requireLogin, logout } = useAuth();
-    const { cartItemCount } = useCart();
-    const { wishlistCount, refetch: refetchWishlist } = useWishlist();
-    const { unreadCount, refetch: refetchNotifications } = useNotification();
     
+    // Handle jika hooks tidak tersedia (provider belum membungkus)
+    let cartItemCount = 0;
+    let wishlistCount = 0;
+    let unreadCount = 0;
+    let refetchWishlist = () => {};
+    let refetchNotifications = () => {};
+    
+    try {
+        const cartContext = useCart();
+        const wishlistContext = useWishlist();
+        const notificationContext = useNotification();
+        
+        cartItemCount = cartContext?.cartItemCount || 0;
+        wishlistCount = wishlistContext?.wishlistCount || 0;
+        unreadCount = notificationContext?.unreadCount || 0;
+        refetchWishlist = wishlistContext?.refetch || (() => {});
+        refetchNotifications = notificationContext?.refetch || (() => {});
+    } catch (error) {
+        console.warn("Context not available, using fallback values");
+    }
+
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
     const [selectedCategories, setSelectedCategories] = useState([]);
@@ -87,6 +105,7 @@ export default function NavbarHome() {
             setSearchResults([]);
             return;
         }
+
         const delay = setTimeout(async () => {
             setIsSearching(true);
             let finalResults = [];
@@ -124,6 +143,7 @@ export default function NavbarHome() {
                 setIsSearching(false);
             }
         }, 300);
+
         return () => clearTimeout(delay);
     }, [searchQuery, selectedCategories]);
 
@@ -226,7 +246,7 @@ export default function NavbarHome() {
             confirmButtonColor: '#d33',
             cancelButtonColor: '#3085d6',
             confirmButtonText: 'Ya, Logout!',
-            cancelButtonText: 'Batal',
+            cancelButtonButtonText: 'Batal',
         });
         if (result.isConfirmed) {
             try {
@@ -269,7 +289,7 @@ export default function NavbarHome() {
                             LOBACA
                         </Button>
                     </div>
-                    
+
                     {/* Desktop Search */}
                     <div className="hidden md:flex items-center gap-2 flex-1 max-w-2xl relative" ref={searchRef}>
                         <form onSubmit={handleSearchSubmit} className="flex-1 relative">
@@ -312,6 +332,8 @@ export default function NavbarHome() {
                                     <Search size={16} className="text-white" />
                                 </Button>
                             </div>
+                            
+                            {/* Dropdown Search Results */}
                             <AnimatePresence>
                                 {showDropdown && (
                                     <motion.div
@@ -351,6 +373,7 @@ export default function NavbarHome() {
                                                 ))}
                                             </div>
                                         </div>
+                                        
                                         <div className="max-h-80 overflow-y-auto overflow-x-hidden">
                                             <div className="p-3 border-b border-gray-200 bg-gray-50">
                                                 <div className="flex items-center justify-between">
@@ -360,6 +383,7 @@ export default function NavbarHome() {
                                                     </span>
                                                 </div>
                                             </div>
+                                            
                                             {isSearching ? (
                                                 <div className="p-6 flex flex-col items-center justify-center">
                                                     <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin mb-2"></div>
@@ -430,6 +454,7 @@ export default function NavbarHome() {
                                                 </div>
                                             )}
                                         </div>
+                                        
                                         {(searchQuery.trim() || selectedCategories.length > 0) && (
                                             <div className="p-3 border-t border-gray-200 bg-gray-50">
                                                 <Button
@@ -446,7 +471,7 @@ export default function NavbarHome() {
                             </AnimatePresence>
                         </form>
                     </div>
-                    
+
                     {/* Desktop Icons */}
                     <div className="hidden md:flex items-center gap-3 relative" ref={profileRef}>
                         <Button
@@ -485,7 +510,7 @@ export default function NavbarHome() {
                                 </span>
                             )}
                         </Button>
-                        
+
                         {/* Profil atau Login */}
                         {isLoading ? (
                             <Button
@@ -598,7 +623,7 @@ export default function NavbarHome() {
                             </Button>
                         )}
                     </div>
-                    
+
                     {/* Mobile Icons */}
                     <div className="flex md:hidden items-center gap-3">
                         <Button
@@ -630,7 +655,7 @@ export default function NavbarHome() {
                     </div>
                 </div>
             </motion.nav>
-            
+
             {/* Mobile Search */}
             {isMobileSearchOpen && (
                 <>
@@ -790,7 +815,7 @@ export default function NavbarHome() {
                     </motion.div>
                 </>
             )}
-            
+
             {/* Mobile Menu */}
             {isMobileMenuOpen && (
                 <motion.div

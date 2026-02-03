@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import { useWishlist } from "@/hooks/useWishlist";
+import { useAuth } from "@/hooks/UseAuth";
+import { useWishlist } from "@/hooks/WishlistProvider";
 import Swal from "sweetalert2";
 import Loading from "@/components/ui/Loading";
 import { Calendar, Tag } from "lucide-react";
@@ -80,7 +80,7 @@ export default function PromoListPage() {
     document.title = "Promo - Lobaca";
     const navigate = useNavigate();
     const { isLoggedIn, requireLogin } = useAuth();
-    const { toggleWishlist, isInWishlist } = useWishlist();
+    const { toggleWishlist, isInWishlist, refetch: refetchWishlist } = useWishlist();
 
     const [promos, setPromos] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -134,6 +134,7 @@ export default function PromoListPage() {
 
     const toggleAllWishlist = async (promoId, books) => {
         if (processingPromo) return;
+
         if (!isLoggedIn) {
             const proceed = await requireLogin("mengelola wishlist");
             if (!proceed) return;
@@ -146,37 +147,51 @@ export default function PromoListPage() {
         let added = 0;
         let removed = 0;
 
-        if (allInWishlist) {
-            for (const book of visibleBooks) {
-                await toggleWishlist(book.id);
-                removed++;
+        try {
+            if (allInWishlist) {
+                for (const book of visibleBooks) {
+                    await toggleWishlist(book.id);
+                    removed++;
+                }
+            } else {
+                const booksToAdd = visibleBooks.filter(book => !isInWishlist(book.id));
+                for (const book of booksToAdd) {
+                    await toggleWishlist(book.id);
+                    added++;
+                }
             }
-        } else {
-            const booksToAdd = visibleBooks.filter(book => !isInWishlist(book.id));
-            for (const book of booksToAdd) {
-                await toggleWishlist(book.id);
-                added++;
+
+
+            window.dispatchEvent(new Event('wishlistUpdated'));
+
+
+            await refetchWishlist();
+
+            if (allInWishlist) {
+                Toast.fire({
+                    icon: "info",
+                    title: `${removed} buku dihapus dari wishlist`
+                });
+            } else if (added > 0) {
+                Toast.fire({
+                    icon: "success",
+                    title: `${added} buku ditambahkan ke wishlist`
+                });
+            } else {
+                Toast.fire({
+                    icon: "info",
+                    title: "Tidak ada perubahan"
+                });
             }
+        } catch (error) {
+            console.error("Toggle wishlist error:", error);
+            Toast.fire({
+                icon: "error",
+                title: "Terjadi kesalahan saat mengubah wishlist"
+            });
+        } finally {
+            setProcessingPromo(null);
         }
-
-        if (allInWishlist) {
-            Toast.fire({
-                icon: "info",
-                title: `${removed} buku dihapus dari wishlist`
-            });
-        } else if (added > 0) {
-            Toast.fire({
-                icon: "success",
-                title: `${added} buku ditambahkan ke wishlist`
-            });
-        } else {
-            Toast.fire({
-                icon: "info",
-                title: "Tidak ada perubahan"
-            });
-        }
-
-        setProcessingPromo(null);
     };
 
     if (loading) {
