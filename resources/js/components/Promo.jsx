@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useWishlist } from "@/hooks/useWishlist";
 import Swal from "sweetalert2";
-import NavbarHome from "@/components/ui/NavbarHome";
 import Loading from "@/components/ui/Loading";
 import { Calendar, Tag } from "lucide-react";
 
@@ -190,7 +189,6 @@ export default function PromoListPage() {
 
     return (
         <div className="min-h-screen bg-linear-to-b from-blue-50/30 to-white">
-            <NavbarHome />
 
             <div className="pt-20 pb-6 px-4 bg-linear-to-r from-blue-600 to-yellow-500">
                 <div className="max-w-6xl mx-auto">

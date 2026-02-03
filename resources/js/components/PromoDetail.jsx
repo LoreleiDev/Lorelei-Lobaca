@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import NavbarHome from "@/components/ui/NavbarHome";
 import Loading from "@/components/ui/Loading";
 import AnimatedWaves from "./ui/AnimatedWaves";
 import { CartProvider } from '../hooks/UseCart';
@@ -118,7 +117,6 @@ export default function PromoDetailPage() {
     if (!promo) {
         return (
             <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
-                <NavbarHome />
                 <div style={{
                     padding: '4rem 1rem',
                     textAlign: 'center'
@@ -172,7 +170,6 @@ export default function PromoDetailPage() {
                 position: 'relative',
                 overflowX: 'hidden'
             }}>
-                <NavbarHome />
                 <Link
                     to="/promo"
                     style={{

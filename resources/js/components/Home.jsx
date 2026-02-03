@@ -3,7 +3,6 @@ import AnimatedWave from "./ui/AnimatedWave";
 import BukuPromo from "./ui/BukuPromo";
 import BannerCarousel from "./ui/Carouselbanner";
 import DaftarBuku from "./ui/DaftarBuku";
-import NavbarHome from "./ui/NavbarHome";
 import Testimoni from "./ui/Testimoni";
 import Footer from "./ui/Footer";
 import Loading from "./ui/Loading";
@@ -38,7 +37,6 @@ export default function Home() {
     return (
         <>
             <main>
-                <NavbarHome />
                 <div className="bg-linear-to-b from-[#1A1F71] to-violet-700">
                     <BannerCarousel />
                     <AnimatedWave />

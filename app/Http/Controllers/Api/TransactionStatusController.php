@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Transaksi;
-use Illuminate\Http\Request;
 
 class TransactionStatusController extends Controller
 {
@@ -24,8 +23,13 @@ class TransactionStatusController extends Controller
             'success' => true,
             'data' => [
                 'order_id' => $transaksi->transaction_id_midtrans,
+                'transaksi_id' => $transaksi->transaksi_id,
                 'status_transaksi' => $transaksi->status_transaksi,
                 'admin_action_status' => $transaksi->admin_action_status,
+                'qr_code_url' => $transaksi->qr_code_url,
+                'payment_method' => $transaksi->payment_method,
+                'created_at' => $transaksi->created_at?->format('Y-m-d H:i:s'),
+                'updated_at' => $transaksi->updated_at?->format('Y-m-d H:i:s'),
             ]
         ]);
     }

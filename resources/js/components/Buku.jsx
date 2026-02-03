@@ -1,4 +1,3 @@
-import NavbarHome from "./ui/NavbarHome";
 import Footer from "./ui/Footer";
 import DaftarBukuAll from "./ui/DaftarBukuAll";
 
@@ -7,7 +6,6 @@ export default function Buku() {
     return (
         <>
             <main>
-                <NavbarHome />
                 <div className="bg-linear-to-b from-[#E7B807] via-violet-700 to-[#1A1F71]">
                     <DaftarBukuAll />
                     <Footer />

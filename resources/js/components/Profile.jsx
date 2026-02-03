@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import ProfileHeader from "@/components/ui/profile/ProfileHeader";
 import ProfileActions from "@/components/ui/profile/ProfileActions";
 import EditProfileModal from "@/components/ui/profile/EditProfileModal";
-import NavbarHome from "./ui/NavbarHome";
 import Loading2 from "./ui/Loading2";
 import { CartProvider } from '../hooks/UseCart';
 
@@ -70,7 +69,6 @@ export default function Profile() {
     if (loading) {
         return (
             <>
-                <NavbarHome />
                 <main className="min-h-screen overflow-x-hidden bg-blue-900 flex items-center justify-center">
                     <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
                         <Loading2 />
@@ -83,7 +81,6 @@ export default function Profile() {
     if (error) {
         return (
             <>
-                <NavbarHome />
                 <main className="min-h-screen overflow-x-hidden bg-blue-900 flex items-center justify-center">
                     <div className="text-white text-xl">Error: {error}</div>
                 </main>
@@ -94,7 +91,6 @@ export default function Profile() {
     return (
         <CartProvider>
             <>
-                <NavbarHome />
                 <main className="min-h-screen overflow-x-hidden bg-blue-900">
                     {/* Background header */}
                     <div className="relative h-32 sm:h-40 md:h-48 bg-[#E7B807] w-full">

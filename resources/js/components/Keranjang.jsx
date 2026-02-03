@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Trash2, Plus, Minus, ShoppingCart, Tag } from "lucide-react";
-import NavbarHome from "./ui/NavbarHome";
 import Loading from "./ui/Loading";
 import Swal from "sweetalert2";
 import PaymentMethodModal from "./ui/Pembayaran";
@@ -79,7 +78,6 @@ export default function KeranjangPage() {
     const [isCheckingOut, setIsCheckingOut] = useState(false);
 
     const {
-        addToCart,
         removeFromCart,
         updateCartItemCount,
         updateCartItemQuantity,
@@ -292,7 +290,6 @@ export default function KeranjangPage() {
 
     return (
         <>
-            <NavbarHome />
             <div className="pt-20 pb-6 px-4 bg-linear-to-r from-blue-600 to-yellow-500">
                 <div className="max-w-6xl mx-auto">
                     <div className="flex items-center gap-3 mb-4">

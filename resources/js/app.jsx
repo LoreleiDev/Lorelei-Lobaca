@@ -4,6 +4,9 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from './hooks/UseCart';
+import { WishlistProvider } from './hooks/WishlistProvider';
+import { NotificationProvider } from './hooks/NotificationProvider';
+import Layout from './components/Layouts';
 import NotFound from "./components/error/404";
 import UserRoute from "./components/UserRoute";
 import Register from "./components/Register";
@@ -40,41 +43,89 @@ ReactDOM.createRoot(document.getElementById("app")).render(
     <React.StrictMode>
         <BrowserRouter>
             <CartProvider>
-                <Routes>
-                    <Route path="/register" element={<Register />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/password/forgot" element={<ForgotPassword />} />
-                    <Route index element={<Home />} />
-                    <Route path="/buku" element={<Buku />} />
-                    <Route path="/search" element={<Search />} />
-                    <Route path="/buku/:id" element={<BukuDetail />} />
-                    <Route path="/wishlist" element={<WishlistPage />} />
-                    <Route path="/promo" element={<PromoPage />} />
-                    <Route path="/promo/:id" element={<PromoDetailPage />} />
-                    <Route path="/cart" element={<KeranjangPage />} />
-                    <Route path="/payment" element={<PaymentSelector />} />
-                    <Route path="/alamat-kurir" element={<AddressCourierSelector />} />
-                    <Route path="/payment-qris" element={<PaymentQris />} />
-                    <Route path="/transaksi" element={<DetailTransaksiPage />} />
-                    <Route path="/purchase-history" element={<RiwayatPesanan />} />
-                    <Route path="/notifications" element={<Notifikasi />} />
-                    <Route element={<UserRoute />}>
-                        <Route path="/profile" element={<Profile />} />
-                        <Route path="/password/edit" element={<EditPassword />} />
-                        <Route path="/email/edit" element={<ChangeEmail />} />
-                    </Route>
-                    <Route path="/admin/login" element={<AdminLogin />} />
-                    <Route element={<AdminRoute />}>
-                        <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                        <Route path="/admin/upload" element={<AdminUpload />} />
-                        <Route path="/admin/inventory" element={<AdminInventory />} />
-                        <Route path="/admin/inventory/:id" element={<AdminEditInventory />} />
-                        <Route path="/admin/promo" element={<AdminPromoSetting />} />
-                        <Route path="/admin/ulasan" element={<AdminUlasanPage />} />
-                        <Route path="/admin/pesanan" element={<AdminPesananPage />} />
-                    </Route>
-                    <Route path="*" element={<NotFound />} />
-                </Routes>
+                <WishlistProvider>
+                    <NotificationProvider>
+                        <Routes>
+                            <Route path="/register" element={<Register />} />
+                            <Route path="/login" element={<Login />} />
+                            <Route path="/password/forgot" element={<ForgotPassword />} />
+                            <Route index element={
+                                <Layout>
+                                    <Home />
+                                </Layout>
+                            } />
+                            <Route path="/buku" element={
+                                <Layout>
+                                    <Buku />
+                                </Layout>
+                            } />
+                            <Route path="/search" element={
+                                <Layout>
+                                    <Search />
+                                </Layout>
+                            } />
+                            <Route path="/buku/:id" element={
+                                <Layout>
+                                    <BukuDetail />
+                                </Layout>
+                            } />
+                            <Route path="/wishlist" element={
+                                <Layout>
+                                    <WishlistPage />
+                                </Layout>
+                            } />
+                            <Route path="/promo" element={
+                                <Layout>
+                                    <PromoPage />
+                                </Layout>
+                            } />
+                            <Route path="/promo/:id" element={
+                                <Layout>
+                                    <PromoDetailPage />
+                                </Layout>
+                            } />
+                            <Route path="/cart" element={
+                                <Layout>
+                                    <KeranjangPage />
+                                </Layout>
+                            } />
+                            <Route path="/payment" element={<PaymentSelector />} />
+                            <Route path="/alamat-kurir" element={<AddressCourierSelector />} />
+                            <Route path="/payment-qris" element={<PaymentQris />} />
+                            <Route path="/transaksi" element={<DetailTransaksiPage />} />
+                            <Route path="/purchase-history" element={
+                                <Layout>
+                                    <RiwayatPesanan />
+                                </Layout>
+                            } />
+                            <Route path="/notifications" element={
+                                <Layout>
+                                    <Notifikasi />
+                                </Layout>
+                            } />
+                            <Route element={<UserRoute />}>
+                                <Route path="/profile" element={
+                                    <Layout>
+                                        <Profile />
+                                    </Layout>
+                                } />
+                                <Route path="/password/edit" element={<EditPassword />} />
+                                <Route path="/email/edit" element={<ChangeEmail />} />
+                            </Route>
+                            <Route path="/admin/login" element={<AdminLogin />} />
+                            <Route element={<AdminRoute />}>
+                                <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                                <Route path="/admin/upload" element={<AdminUpload />} />
+                                <Route path="/admin/inventory" element={<AdminInventory />} />
+                                <Route path="/admin/inventory/:id" element={<AdminEditInventory />} />
+                                <Route path="/admin/promo" element={<AdminPromoSetting />} />
+                                <Route path="/admin/ulasan" element={<AdminUlasanPage />} />
+                                <Route path="/admin/pesanan" element={<AdminPesananPage />} />
+                            </Route>
+                            <Route path="*" element={<NotFound />} />
+                        </Routes>
+                    </NotificationProvider>
+                </WishlistProvider>
             </CartProvider>
         </BrowserRouter>
     </React.StrictMode>

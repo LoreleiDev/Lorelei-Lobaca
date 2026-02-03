@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import OrderDetailModal from './DetailTransaksi';
-import NavbarHome from './ui/NavbarHome';
 import Loading from "./ui/Loading";
 import {
     Package,
@@ -45,7 +44,6 @@ export default function OrderHistory() {
     });
     const navigate = useNavigate();
 
-    // Status configuration dengan label yang benar dan status baru
     const statusConfig = {
         'transaksi-diproses': {
             label: 'Pesanan Diproses',
@@ -332,7 +330,6 @@ export default function OrderHistory() {
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50">
-                <NavbarHome />
                 <div className="fixed inset-0 bg-gray-50 flex flex-col items-center justify-center z-50">
                     <Loading />
                 </div>
@@ -342,7 +339,6 @@ export default function OrderHistory() {
 
     return (
         <>
-            <NavbarHome />
             <div className="min-h-screen bg-gray-50 py-8 px-4">
                 <div className="max-w-6xl mx-auto">
                     {/* Header */}
@@ -366,7 +362,7 @@ export default function OrderHistory() {
                             </div>
                             <div className="flex flex-wrap gap-2">
                                 <button
-                                    className={`px-4 py-2 rounded-md font-medium transition-colors flex items-center gap-2 ${activeTab === 'all'
+                                    className={`cursor-pointer px-4 py-2 rounded-md font-medium transition-colors flex items-center gap-2 ${activeTab === 'all'
                                         ? 'bg-gray-800 text-white'
                                         : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
                                         }`}
@@ -379,7 +375,7 @@ export default function OrderHistory() {
                                     return (
                                         <button
                                             key={status}
-                                            className={`px-3 py-2 rounded-md font-medium transition-colors flex items-center gap-2 ${activeTab === status
+                                            className={`cursor-pointer px-3 py-2 rounded-md font-medium transition-colors flex items-center gap-2 ${activeTab === status
                                                 ? `${config.textColor} ${config.color} border ${config.borderColor}`
                                                 : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-300'
                                                 }`}
@@ -401,7 +397,7 @@ export default function OrderHistory() {
                         {/* Date Filter */}
                         <div>
                             <button
-                                className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4"
+                                className="cursor-pointer flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4"
                                 onClick={() => setShowDateFilter(!showDateFilter)}
                             >
                                 <CalendarDays className="w-4 h-4" />
@@ -437,14 +433,14 @@ export default function OrderHistory() {
                                     </div>
                                     <div className="flex gap-2">
                                         <button
-                                            className="px-4 py-2 bg-gray-800 text-white rounded-md text-sm font-medium hover:bg-gray-700 transition-colors flex items-center gap-2"
+                                            className="cursor-pointer px-4 py-2 bg-gray-800 text-white rounded-md text-sm font-medium hover:bg-gray-700 transition-colors flex items-center gap-2"
                                             onClick={applyFilters}
                                         >
                                             <Filter className="w-4 h-4" />
                                             Terapkan Filter
                                         </button>
                                         <button
-                                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-2"
+                                            className="cursor-pointer px-4 py-2 bg-gray-100 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-2"
                                             onClick={resetDateFilter}
                                         >
                                             <X className="w-4 h-4" />
@@ -475,7 +471,7 @@ export default function OrderHistory() {
                             </p>
                             {(activeTab !== 'all' || dateFilter.start || dateFilter.end) ? (
                                 <button
-                                    className="bg-gray-800 text-white px-6 py-2.5 rounded-md font-medium hover:bg-gray-700 transition-colors flex items-center gap-2 mx-auto"
+                                    className="cursor-pointer bg-gray-800 text-white px-6 py-2.5 rounded-md font-medium hover:bg-gray-700 transition-colors flex items-center gap-2 mx-auto"
                                     onClick={() => {
                                         setActiveTab('all');
                                         resetDateFilter();
@@ -486,7 +482,7 @@ export default function OrderHistory() {
                                 </button>
                             ) : (
                                 <button
-                                    className="bg-gray-800 text-white px-6 py-2.5 rounded-md font-medium hover:bg-gray-700 transition-colors flex items-center gap-2 mx-auto"
+                                    className="cursor-pointer bg-gray-800 text-white px-6 py-2.5 rounded-md font-medium hover:bg-gray-700 transition-colors flex items-center gap-2 mx-auto"
                                     onClick={() => navigate('/buku')}
                                 >
                                     <Home className="w-4 h-4" />
@@ -525,7 +521,6 @@ export default function OrderHistory() {
 
                                     {/* Transaction Content */}
                                     <div className="p-4">
-                                        {/* Shipping Info - Only show for "pesanan-sedang-dikirim" */}
                                         {transaction.status_transaksi === 'pesanan-sedang-dikirim' && (
                                             <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                                                 <h4 className="font-semibold text-yellow-800 mb-3 flex items-center gap-2">
@@ -654,7 +649,7 @@ export default function OrderHistory() {
                                                 {transaction.status_transaksi === 'transaksi-sukses' &&
                                                     transaction.admin_action_status === 'approved' && (
                                                         <button
-                                                            className="bg-red-50 text-red-700 px-4 py-2 rounded-md font-medium hover:bg-red-100 transition-colors flex items-center gap-2 border border-red-200"
+                                                            className="cursor-pointer bg-red-50 text-red-700 px-4 py-2 rounded-md font-medium hover:bg-red-100 transition-colors flex items-center gap-2 border border-red-200"
                                                             onClick={() => handleCancelOrder(transaction.transaksi_id)}
                                                         >
                                                             <X className="w-4 h-4" />
@@ -666,7 +661,7 @@ export default function OrderHistory() {
                                             <div className="flex flex-wrap gap-2">
                                                 {transaction.status_transaksi === 'pesanan-sedang-dikirim' && (
                                                     <button
-                                                        className="bg-purple-50 text-purple-700 px-4 py-2 rounded-md font-medium hover:bg-purple-100 transition-colors flex items-center gap-2 border border-purple-200"
+                                                        className="cursor-pointer bg-purple-50 text-purple-700 px-4 py-2 rounded-md font-medium hover:bg-purple-100 transition-colors flex items-center gap-2 border border-purple-200"
                                                         onClick={() => handleUpdateStatus(transaction.transaksi_id, 'pesanan-telah-diterima')}
                                                     >
                                                         <CheckCircle className="w-4 h-4" />
@@ -681,7 +676,7 @@ export default function OrderHistory() {
                                                                 orderId: transaction.order_id
                                                             }
                                                         })}
-                                                        className="bg-blue-50 text-blue-700 px-4 py-2 rounded-md font-medium hover:bg-blue-100 transition-colors flex items-center gap-2 border border-blue-200"
+                                                        className="cursor-pointer bg-blue-50 text-blue-700 px-4 py-2 rounded-md font-medium hover:bg-blue-100 transition-colors flex items-center gap-2 border border-blue-200"
                                                     >
                                                         <Eye className="w-4 h-4" />
                                                         Lihat Status Pembayaran
@@ -689,7 +684,7 @@ export default function OrderHistory() {
                                                 )}
 
                                                 <button
-                                                    className="bg-gray-800 text-white px-5 py-2 rounded-md font-medium hover:bg-gray-700 transition-colors flex items-center gap-2"
+                                                    className="cursor-pointer bg-gray-800 text-white px-5 py-2 rounded-md font-medium hover:bg-gray-700 transition-colors flex items-center gap-2"
                                                     onClick={() => viewTransactionDetail(transaction)}
                                                 >
                                                     Lihat Detail

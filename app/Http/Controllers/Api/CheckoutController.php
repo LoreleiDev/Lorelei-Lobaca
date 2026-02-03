@@ -250,6 +250,17 @@ class CheckoutController extends Controller
         $midtransStatus = $midtransResponse['transaction_status'] ?? 'pending';
         $mappedStatus = $statusMapping[$midtransStatus] ?? 'transaksi-diproses';
 
+        // === TAMBAHKAN INI: Ambil QR Code URL dari Midtrans Response ===
+        $qrCodeUrl = null;
+        if (isset($midtransResponse['actions']) && is_array($midtransResponse['actions'])) {
+            $qrisAction = collect($midtransResponse['actions'])
+                ->firstWhere('name', 'generate-qr-code');
+            if ($qrisAction && isset($qrisAction['url'])) {
+                $qrCodeUrl = $qrisAction['url'];
+            }
+        }
+        // =================================================================
+
         $transaksi = Transaksi::create([
             'user_id' => $user->id,
             'total_harga' => $totalAkhir,
@@ -262,6 +273,7 @@ class CheckoutController extends Controller
             'transaction_id_midtrans' => $orderId,
             'midtrans_response' => json_encode($midtransResponse),
             'payment_method' => $frontendPaymentMethod,
+            'qr_code_url' => $qrCodeUrl, // === TAMBAHKAN INI ===
         ]);
 
         foreach ($cart->items as $item) {
@@ -327,6 +339,7 @@ class CheckoutController extends Controller
             'success' => true,
             'message' => 'Transaksi pembayaran berhasil dibuat.',
             'data' => $midtransResponse,
+            'qr_code_url' => $qrCodeUrl, 
         ], 201);
     }
 

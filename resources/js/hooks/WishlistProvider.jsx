@@ -1,19 +1,15 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useAuth } from "./useAuth";
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import { useAuth } from "./UseAuth";
 
-const isBookInCachedWishlist = (bukuId) => {
-    if (typeof window === "undefined") return false;
-    const cached = localStorage.getItem("wishlist");
-    if (!cached) return false;
-    try {
-        const list = JSON.parse(cached);
-        return list.some(item => String(item.id) === String(bukuId));
-    } catch {
-        return false;
-    }
+const WishlistContext = createContext();
+
+export const useWishlist = () => {
+    const context = useContext(WishlistContext);
+    if (!context) throw new Error('useWishlist must be used within a WishlistProvider');
+    return context;
 };
 
-export function useWishlist() {
+export const WishlistProvider = ({ children }) => {
     const { isLoggedIn, token } = useAuth();
     const [wishlist, setWishlist] = useState(() => {
         if (typeof window !== "undefined") {
@@ -100,7 +96,15 @@ export function useWishlist() {
         if (wishlist.length > 0) {
             return wishlist.some(book => String(book.id) === idStr);
         }
-        return isBookInCachedWishlist(idStr);
+        if (typeof window === "undefined") return false;
+        const cached = localStorage.getItem("wishlist");
+        if (!cached) return false;
+        try {
+            const list = JSON.parse(cached);
+            return list.some(item => String(item.id) === idStr);
+        } catch {
+            return false;
+        }
     };
 
     const toggleWishlist = useCallback(async (bukuId) => {
@@ -152,13 +156,19 @@ export function useWishlist() {
         }
     }, [isInWishlist, token, addToWishlist, removeFromWishlist]);
 
-    return {
-        wishlist,
-        wishlistCount,
-        loading,
-        isInWishlist,
-        toggleWishlist,
-        updateWishlistCount,
-        refetch: fetchWishlist
-    };
-}
+    return (
+        <WishlistContext.Provider
+            value={{
+                wishlist,
+                wishlistCount,
+                loading,
+                isInWishlist,
+                toggleWishlist,
+                updateWishlistCount,
+                refetch: fetchWishlist
+            }}
+        >
+            {children}
+        </WishlistContext.Provider>
+    );
+};

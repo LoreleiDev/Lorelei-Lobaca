@@ -20,6 +20,8 @@ import { Button } from "@/components/ui/button";
 import Swal from 'sweetalert2';
 import { useAuth } from "@/hooks/UseAuth";
 import { useCart } from "@/hooks/UseCart";
+import { useWishlist } from "@/hooks/WishlistProvider";
+import { useNotification } from "@/hooks/NotificationProvider";
 
 const BOOK_CATEGORIES = [
     { value: "fiksi", label: "Fiksi" },
@@ -66,7 +68,9 @@ export default function NavbarHome() {
     const navigate = useNavigate();
     const { profile, isLoggedIn, isLoading, requireLogin, logout } = useAuth();
     const { cartItemCount } = useCart();
-
+    const { wishlistCount, refetch: refetchWishlist } = useWishlist();
+    const { unreadCount, refetch: refetchNotifications } = useNotification();
+    
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
     const [selectedCategories, setSelectedCategories] = useState([]);
@@ -75,10 +79,8 @@ export default function NavbarHome() {
     const [isSearching, setIsSearching] = useState(false);
     const [showDropdown, setShowDropdown] = useState(false);
     const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
-
     const searchRef = useRef(null);
     const profileRef = useRef(null);
-
 
     useEffect(() => {
         if (!searchQuery.trim() && selectedCategories.length === 0) {
@@ -125,17 +127,18 @@ export default function NavbarHome() {
         return () => clearTimeout(delay);
     }, [searchQuery, selectedCategories]);
 
-
     useEffect(() => {
         const handleClickOutside = (e) => {
             if (searchRef.current && !searchRef.current.contains(e.target)) {
                 setShowDropdown(false);
             }
+            if (profileRef.current && !profileRef.current.contains(e.target)) {
+                setIsProfileDropdownOpen(false);
+            }
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
-
 
     const toggleCategory = (value) => {
         setSelectedCategories((prev) =>
@@ -214,7 +217,6 @@ export default function NavbarHome() {
         setShowDropdown(!showDropdown);
     };
 
-
     const handleLogout = async () => {
         const result = await Swal.fire({
             title: 'Yakin ingin keluar?',
@@ -267,7 +269,7 @@ export default function NavbarHome() {
                             LOBACA
                         </Button>
                     </div>
-
+                    
                     {/* Desktop Search */}
                     <div className="hidden md:flex items-center gap-2 flex-1 max-w-2xl relative" ref={searchRef}>
                         <form onSubmit={handleSearchSubmit} className="flex-1 relative">
@@ -310,7 +312,6 @@ export default function NavbarHome() {
                                     <Search size={16} className="text-white" />
                                 </Button>
                             </div>
-
                             <AnimatePresence>
                                 {showDropdown && (
                                     <motion.div
@@ -445,7 +446,7 @@ export default function NavbarHome() {
                             </AnimatePresence>
                         </form>
                     </div>
-
+                    
                     {/* Desktop Icons */}
                     <div className="hidden md:flex items-center gap-3 relative" ref={profileRef}>
                         <Button
@@ -462,19 +463,29 @@ export default function NavbarHome() {
                         </Button>
                         <Button
                             onClick={handleWishlist}
-                            className="p-2 hover:bg-primary-foreground/10 rounded-md transition-colors cursor-pointer"
+                            className="p-2 hover:bg-primary-foreground/10 rounded-md transition-colors cursor-pointer relative"
                             aria-label="Wishlist"
                         >
                             <Heart size={18} />
+                            {wishlistCount > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                                    {wishlistCount}
+                                </span>
+                            )}
                         </Button>
                         <Button
                             onClick={handleViewAllNotifications}
-                            className="p-2 hover:bg-primary-foreground/10 rounded-md transition-colors cursor-pointer"
+                            className="p-2 hover:bg-primary-foreground/10 rounded-md transition-colors cursor-pointer relative"
                             aria-label="Notifications"
                         >
                             <Bell size={18} />
+                            {unreadCount > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                                    {unreadCount}
+                                </span>
+                            )}
                         </Button>
-
+                        
                         {/* Profil atau Login */}
                         {isLoading ? (
                             <Button
@@ -500,7 +511,6 @@ export default function NavbarHome() {
                                         <User size={18} className="text-white" />
                                     )}
                                 </Button>
-
                                 {isProfileDropdownOpen && (
                                     <>
                                         <div className="fixed inset-0 z-40" onClick={() => setIsProfileDropdownOpen(false)} />
@@ -588,7 +598,7 @@ export default function NavbarHome() {
                             </Button>
                         )}
                     </div>
-
+                    
                     {/* Mobile Icons */}
                     <div className="flex md:hidden items-center gap-3">
                         <Button
@@ -620,7 +630,7 @@ export default function NavbarHome() {
                     </div>
                 </div>
             </motion.nav>
-
+            
             {/* Mobile Search */}
             {isMobileSearchOpen && (
                 <>
@@ -780,7 +790,7 @@ export default function NavbarHome() {
                     </motion.div>
                 </>
             )}
-
+            
             {/* Mobile Menu */}
             {isMobileMenuOpen && (
                 <motion.div
@@ -840,10 +850,15 @@ export default function NavbarHome() {
                                 </Button>
                                 <Button
                                     onClick={handleWishlist}
-                                    className="w-full justify-start gap-3 p-2 hover:text-blue-500 hover:bg-gray-300 rounded-md transition-colors cursor-pointer text-black"
+                                    className="w-full justify-start gap-3 p-2 hover:text-blue-500 hover:bg-gray-300 rounded-md transition-colors cursor-pointer text-black relative"
                                     variant="ghost"
                                 >
                                     <span className="text-sm">Wishlist</span>
+                                    {wishlistCount > 0 && (
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                                            {wishlistCount}
+                                        </span>
+                                    )}
                                 </Button>
                                 <div className="p-3 mb-3">
                                     <div className="flex items-center justify-between mb-2">
@@ -860,8 +875,12 @@ export default function NavbarHome() {
                                     </div>
                                     <div className="space-y-5 mb-3 border-b">
                                         <div className="text-center py-3 text-gray-500 text-xs">Tidak ada notifikasi pesanan</div>
-
                                     </div>
+                                    {unreadCount > 0 && (
+                                        <div className="text-center py-2 bg-blue-50 rounded-lg text-blue-700 text-sm font-medium">
+                                            {unreadCount} notifikasi belum dibaca
+                                        </div>
+                                    )}
                                     <div className="flex gap-2 mt-3">
                                         <Button
                                             onClick={handleLogout}
@@ -879,7 +898,6 @@ export default function NavbarHome() {
                                 </div>
                             </>
                         )}
-
                         {!isLoggedIn && (
                             <Button
                                 onClick={() => {

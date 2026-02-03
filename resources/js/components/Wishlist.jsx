@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import NavbarHome from "./ui/NavbarHome";
 import { useAuth } from "@/hooks/useAuth";
 import AnimatedWaves from "./ui/AnimatedWaves";
 import Loading from "./ui/Loading";
@@ -99,7 +98,6 @@ export default function WishlistPage() {
     if (wishlistBooks.length === 0) {
         return (
             <>
-                <NavbarHome />
                 <div className="relative py-12 px-4 sm:px-6 md:px-8 min-h-[calc(100vh-80px)] flex ">
                     <div className="absolute inset-0 z-0">
                         <AnimatedWaves />
@@ -128,7 +126,6 @@ export default function WishlistPage() {
     return (
         <CartProvider>
             <>
-                <NavbarHome />
                 <div className="py-3 md:py-4 px-3 sm:px-4 mb-16">
                     <div className="block">
                         <AnimatedWaves />

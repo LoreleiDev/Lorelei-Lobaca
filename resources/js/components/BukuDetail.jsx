@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Heart, ShoppingCart, Star } from "lucide-react";
-import NavbarHome from "@/components/ui/NavbarHome";
 import Loading from "@/components/ui/Loading";
 import AnimatedWaves from "@/components/ui/AnimatedWaves";
 import { useAuth } from "@/hooks/useAuth";
@@ -246,7 +245,6 @@ export default function BukuDetail() {
     if (!book) {
         return (
             <div className="min-h-screen bg-gray-50">
-                <NavbarHome />
                 <div className="py-16 px-4 sm:px-6 md:px-8">
                     <div className="max-w-2xl mx-auto text-center">
                         <h1 className="text-2xl font-bold text-gray-800 mb-4">Buku Tidak Ditemukan</h1>
@@ -269,7 +267,6 @@ export default function BukuDetail() {
             </div>
 
             <div className="relative z-10">
-                <NavbarHome />
 
                 {book && (
                     <>
