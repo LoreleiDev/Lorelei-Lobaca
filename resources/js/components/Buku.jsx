@@ -6,7 +6,7 @@ export default function Buku() {
     return (
         <>
             <main>
-                <div className="bg-linear-to-b from-[#E7B807] via-violet-700 to-[#1A1F71]">
+                <div className="bg-[#f8f5f0]">
                     <DaftarBukuAll />
                     <Footer />
                 </div>
