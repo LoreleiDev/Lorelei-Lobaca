@@ -108,14 +108,14 @@ export default function BannerCarousel() {
             </div>
 
             {banners.length > 1 && (
-                <div className="absolute bottom-1 left-1/2 -translate-x-1/2 z-20 flex gap-2 sm:gap-3">
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex gap-2 sm:gap-3">
                     {banners.map((_, index) => (
                         <button
                             key={index}
                             onClick={() => setCurrent(index)}
                             className={`transition-all duration-300 cursor-pointer rounded-full ${index === current
                                 ? "bg-black w-8 sm:w-10 h-2 sm:h-2.5"
-                                : "bg-gray-500 hover:bg-gray-400 w-2 sm:w-2.5 h-2 sm:h-2.5"
+                                : "bg-gray-300 hover:bg-gray-400 w-2 sm:w-2.5 h-2 sm:h-2.5"
                                 }`}
                             aria-label={`Go to slide ${index + 1}`}
                         />

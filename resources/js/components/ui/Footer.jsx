@@ -1,11 +1,11 @@
 import React from "react";
 import { FaInstagram, FaTiktok, FaWhatsapp } from "react-icons/fa";
-import { 
-  Package, 
-  Headphones, 
-  Truck, 
-  CreditCard,
-  Shield
+import {
+    Package,
+    Headphones,
+    Truck,
+    CreditCard,
+    Shield
 } from "lucide-react";
 // Import gambar QRIS dari SVG
 import qrisImage from "../../assets/qris.svg";
@@ -14,7 +14,7 @@ export default function Footer() {
     return (
         <footer className="text-gray-600 w-full relative">
             {/* Bagian Konten Footer */}
-            <div className="bg-linear-to-b from-gray-50 to-gray-100 border-t border-gray-200 py-12 px-4"> 
+            <div className="bg-linear-to-b from-gray-50 to-gray-100 border-t border-gray-200 py-12 px-4">
                 <div className="max-w-6xl mx-auto">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12">
                         {/* Tentang Lobaca */}
@@ -26,56 +26,9 @@ export default function Footer() {
                                 <h3 className="text-xl font-bold text-gray-800">Lobaca</h3>
                             </div>
                             <p className="text-gray-600 leading-relaxed mb-6 max-w-md">
-                                Platform penjualan buku online terpercaya. Menyediakan berbagai koleksi 
+                                Platform penjualan buku online terpercaya. Menyediakan berbagai koleksi
                                 buku berkualitas dengan pengalaman belanja yang aman dan nyaman.
                             </p>
-                            
-                            {/* QRIS Payment - Gambar saja */}
-                            <div className="mt-8">
-                                <div className="p-4  max-w-35">
-                                    <div className="flex items-center justify-center">
-                                        <img 
-                                            src={qrisImage} 
-                                            alt="QRIS Payment" 
-                                            className="w-28 h-28 object-contain"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Layanan */}
-                        <div>
-                            <h4 className="font-semibold text-gray-800 mb-6 flex items-center gap-2">
-                                <Headphones className="w-4 h-4" />
-                                Layanan
-                            </h4>
-                            <ul className="space-y-3">
-                                <li>
-                                    <a
-                                        href="#"
-                                        className="text-gray-600 hover:text-gray-900 transition-colors duration-200 inline-block hover:translate-x-1 transform"
-                                    >
-                                        Pusat Bantuan
-                                    </a>
-                                </li>
-                                <li>
-                                    <a
-                                        href="#"
-                                        className="text-gray-600 hover:text-gray-900 transition-colors duration-200 inline-block hover:translate-x-1 transform"
-                                    >
-                                        Kebijakan Privasi
-                                    </a>
-                                </li>
-                                <li>
-                                    <a
-                                        href="#"
-                                        className="text-gray-600 hover:text-gray-900 transition-colors duration-200 inline-block hover:translate-x-1 transform"
-                                    >
-                                        Syarat & Ketentuan
-                                    </a>
-                                </li>
-                            </ul>
                         </div>
 
                         {/* Kontak & Sosial Media */}
@@ -86,9 +39,9 @@ export default function Footer() {
                             </h4>
                             <ul className="space-y-4">
                                 <li>
-                                    <a 
-                                        href="https://instagram.com/lobacaofc" 
-                                        target="_blank" 
+                                    <a
+                                        href="https://instagram.com/lobacaofc"
+                                        target="_blank"
                                         rel="noopener noreferrer"
                                         className="flex items-center gap-3 text-gray-600 hover:text-pink-600 transition-colors duration-200 group"
                                     >
@@ -102,9 +55,9 @@ export default function Footer() {
                                     </a>
                                 </li>
                                 <li>
-                                    <a 
-                                        href="https://tiktok.com/@lobaca.id" 
-                                        target="_blank" 
+                                    <a
+                                        href="https://tiktok.com/@lobaca.id"
+                                        target="_blank"
                                         rel="noopener noreferrer"
                                         className="flex items-center gap-3 text-gray-600 hover:text-gray-900 transition-colors duration-200 group"
                                     >
@@ -118,9 +71,9 @@ export default function Footer() {
                                     </a>
                                 </li>
                                 <li>
-                                    <a 
-                                        href="https://wa.me/6285174116973" 
-                                        target="_blank" 
+                                    <a
+                                        href="https://wa.me/6285174116973"
+                                        target="_blank"
                                         rel="noopener noreferrer"
                                         className="flex items-center gap-3 text-gray-600 hover:text-green-600 transition-colors duration-200 group"
                                     >
@@ -135,11 +88,26 @@ export default function Footer() {
                                 </li>
                             </ul>
                         </div>
+
+                        {/* Layanan */}
+                        <div>
+                            <div className="p-4  max-w-35">
+                                <div className="flex items-center justify-center">
+                                    <img
+                                        src={qrisImage}
+                                        alt="QRIS Payment"
+                                        className="w-32 h-32 object-contain"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+
                     </div>
 
                 </div>
             </div>
-            
+
             {/* Bagian Copyright */}
             <div className="bg-gray-900 py-6 text-center">
                 <div className="max-w-6xl mx-auto px-4">

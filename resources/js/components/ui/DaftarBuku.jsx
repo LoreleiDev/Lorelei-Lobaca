@@ -182,7 +182,7 @@ export default function DaftarBuku() {
                 <div className="flex justify-center mt-6">
                     <Link
                         to="/buku"
-                        className="text-xs md:text-sm font-bold text-black hover:text-gray-300 transition-colors"
+                        className="text-xs md:text-sm font-bold text-black hover:text-gray-700 transition-colors"
                     >
                         Lihat Selengkapnya →
                     </Link>

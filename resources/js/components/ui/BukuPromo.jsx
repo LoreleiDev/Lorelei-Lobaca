@@ -179,7 +179,7 @@ export default function BukuPromo() {
                 <div className="flex justify-center mt-6">
                     <Link
                         to="/promo"
-                        className="text-xs md:text-sm font-bold text-black hover:text-gray-300 transition-colors"
+                        className="text-xs md:text-sm font-bold text-black hover:text-gray-700 transition-colors"
                     >
                         Lihat selengkapnya →
                     </Link>
