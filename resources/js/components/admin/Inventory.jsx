@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,23 +13,29 @@ import {
     Users,
     Library,
     MoreVertical,
+    ChevronLeft,
+    ChevronRight,
+    ChevronsLeft,
+    ChevronsRight,
+    Settings,
+    X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import Sidebar from "./ui/Sidebar";
 import Swal from "sweetalert2";
 import Loading from "../ui/Loading";
 
 const TruncatedText = ({ text, maxLength = 150 }) => {
     const [isExpanded, setIsExpanded] = useState(false);
-
     if (!text) return "Tidak ada deskripsi.";
-
     const shouldTruncate = text.length > maxLength;
     const displayText = isExpanded
         ? text
         : text.slice(0, maxLength) + (shouldTruncate ? "..." : "");
-
     return (
         <div>
             <p className="whitespace-pre-line text-xs leading-relaxed">
@@ -58,6 +64,8 @@ const MobileBookCard = ({
     deletingId,
     mobileMenuOpen,
     setMobileMenuOpen,
+    lowStockThreshold,
+    highStockThreshold,
 }) => {
     const dropdownRef = useRef(null);
 
@@ -73,7 +81,6 @@ const MobileBookCard = ({
                 }));
             }
         };
-
         document.addEventListener("mousedown", handleClickOutside);
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
@@ -102,22 +109,47 @@ const MobileBookCard = ({
 
     const getStockColor = (stok) => {
         if (stok === 0) return "bg-red-100 text-red-800 border-red-200";
-        if (stok <= 5) return "bg-orange-100 text-orange-800 border-orange-200";
+        if (stok <= lowStockThreshold) return "bg-orange-100 text-orange-800 border-orange-200";
         return "bg-green-100 text-green-800 border-green-200";
     };
 
-    const renderKategori = (kategoriString) => {
-        if (!kategoriString)
+    const renderKategori = (kategori) => {
+        if (!kategori) {
             return <span className="text-muted-foreground">–</span>;
-        return kategoriString.split(",").map((k, i) => (
-            <Badge
-                key={i}
-                variant="secondary"
-                className="bg-purple-100 text-purple-800 border-purple-200 text-xs mr-1 mb-1"
-            >
-                {k.trim()}
-            </Badge>
-        ));
+        }
+
+        if (Array.isArray(kategori)) {
+            if (kategori.length === 0) {
+                return <span className="text-muted-foreground">–</span>;
+            }
+            return kategori.map((k, i) => (
+                <Badge
+                    key={i}
+                    variant="secondary"
+                    className="bg-purple-100 text-purple-800 border-purple-200 text-xs mr-1 mb-1"
+                >
+                    {k}
+                </Badge>
+            ));
+        }
+
+        if (typeof kategori === 'string') {
+            const categories = kategori.split(",").filter(k => k.trim());
+            if (categories.length === 0) {
+                return <span className="text-muted-foreground">–</span>;
+            }
+            return categories.map((k, i) => (
+                <Badge
+                    key={i}
+                    variant="secondary"
+                    className="bg-purple-100 text-purple-800 border-purple-200 text-xs mr-1 mb-1"
+                >
+                    {k.trim()}
+                </Badge>
+            ));
+        }
+
+        return <span className="text-muted-foreground">–</span>;
     };
 
     return (
@@ -158,7 +190,6 @@ const MobileBookCard = ({
                             </p>
                         </div>
                     </div>
-
                     <div className="relative" ref={dropdownRef}>
                         <button
                             onClick={() => toggleMobileMenu(book.buku_id)}
@@ -166,7 +197,6 @@ const MobileBookCard = ({
                         >
                             <MoreVertical size={16} />
                         </button>
-
                         {mobileMenuOpen[book.buku_id] && (
                             <div className="absolute right-0 top-full mt-1 bg-white border border-border rounded-lg shadow-lg z-50 min-w-35">
                                 <button
@@ -203,7 +233,6 @@ const MobileBookCard = ({
                         )}
                     </div>
                 </div>
-
                 <div className="space-y-2 text-sm">
                     <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Stok:</span>
@@ -215,7 +244,6 @@ const MobileBookCard = ({
                             {book.stok}
                         </Badge>
                     </div>
-
                     <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Kondisi:</span>
                         <Badge
@@ -226,7 +254,6 @@ const MobileBookCard = ({
                             {book.kondisi}
                         </Badge>
                     </div>
-
                     <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Harga:</span>
                         {book.promo_info ? (
@@ -250,14 +277,12 @@ const MobileBookCard = ({
                             </span>
                         )}
                     </div>
-
                     <div>
                         <span className="text-muted-foreground">Kategori:</span>
                         <div className="mt-1 flex flex-wrap gap-1">
                             {renderKategori(book.kategori)}
                         </div>
                     </div>
-
                     <div>
                         <span className="text-muted-foreground">
                             Deskripsi:
@@ -275,6 +300,107 @@ const MobileBookCard = ({
     );
 };
 
+const Pagination = ({
+    currentPage,
+    totalPages,
+    onPageChange,
+    itemsPerPage,
+    onItemsPerPageChange,
+}) => {
+    const itemsPerPageOptions = [5, 10, 20, 50];
+
+    const getPageNumbers = () => {
+        const pages = [];
+        const maxVisiblePages = 5;
+        if (totalPages <= maxVisiblePages) {
+            for (let i = 1; i <= totalPages; i++) {
+                pages.push(i);
+            }
+        } else {
+            if (currentPage <= 3) {
+                pages.push(1, 2, 3, 4, "...", totalPages);
+            } else if (currentPage >= totalPages - 2) {
+                pages.push(1, "...", totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+            } else {
+                pages.push(1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages);
+            }
+        }
+        return pages;
+    };
+
+    return (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-6 border-t border-border">
+            <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Tampilkan:</span>
+                <select
+                    value={itemsPerPage}
+                    onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
+                    className="border border-border rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
+                >
+                    {itemsPerPageOptions.map((option) => (
+                        <option key={option} value={option}>
+                            {option} per halaman
+                        </option>
+                    ))}
+                </select>
+            </div>
+            <div className="flex items-center gap-2">
+                <button
+                    onClick={() => onPageChange(1)}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-md border border-border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title="Halaman pertama"
+                >
+                    <ChevronsLeft size={16} />
+                </button>
+                <button
+                    onClick={() => onPageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-md border border-border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title="Halaman sebelumnya"
+                >
+                    <ChevronLeft size={16} />
+                </button>
+                <div className="flex items-center gap-1">
+                    {getPageNumbers().map((page, index) => (
+                        <button
+                            key={index}
+                            onClick={() => typeof page === "number" && onPageChange(page)}
+                            disabled={page === "..."}
+                            className={`min-w-8 h-8 px-2 rounded-md border transition-colors ${
+                                currentPage === page
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "border-border hover:bg-muted"
+                            } ${page === "..." ? "cursor-default hover:bg-transparent" : ""}`}
+                        >
+                            {page}
+                        </button>
+                    ))}
+                </div>
+                <button
+                    onClick={() => onPageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="p-2 rounded-md border border-border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title="Halaman berikutnya"
+                >
+                    <ChevronRight size={16} />
+                </button>
+                <button
+                    onClick={() => onPageChange(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className="p-2 rounded-md border border-border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title="Halaman terakhir"
+                >
+                    <ChevronsRight size={16} />
+                </button>
+            </div>
+            <div className="text-sm text-muted-foreground">
+                Halaman {currentPage} dari {totalPages}
+            </div>
+        </div>
+    );
+};
+
 export default function BookInventory({ books = [], onRefresh = () => {} }) {
     const [deletingId, setDeletingId] = useState(null);
     const [selectedBook, setSelectedBook] = useState(null);
@@ -284,15 +410,18 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [isMobile, setIsMobile] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState({});
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [lowStockThreshold, setLowStockThreshold] = useState(5);
+    const [highStockThreshold, setHighStockThreshold] = useState(10);
 
     useEffect(() => {
         const checkScreenSize = () => {
             setIsMobile(window.innerWidth < 768);
         };
-
         checkScreenSize();
         window.addEventListener("resize", checkScreenSize);
-
         return () => window.removeEventListener("resize", checkScreenSize);
     }, []);
 
@@ -302,28 +431,56 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
         }
     }, [selectedBook]);
 
-    const filteredBooks = books.filter((book) => {
-        const matchesSearch =
-            book.judul.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            book.penulis.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            book.penerbit.toLowerCase().includes(searchTerm.toLowerCase());
-
-        let matchesStatus = true;
-        if (statusFilter === "high") {
-            matchesStatus = book.stok > 10;
-        } else if (statusFilter === "low") {
-            matchesStatus = book.stok >= 1 && book.stok <= 5;
-        } else if (statusFilter === "out") {
-            matchesStatus = book.stok === 0;
+    useEffect(() => {
+        const savedLow = localStorage.getItem("lowStockThreshold");
+        const savedHigh = localStorage.getItem("highStockThreshold");
+        
+        if (savedLow) {
+            setLowStockThreshold(parseInt(savedLow));
         }
+        if (savedHigh) {
+            setHighStockThreshold(parseInt(savedHigh));
+        }
+    }, []);
 
-        return matchesSearch && matchesStatus;
-    });
+    useEffect(() => {
+        localStorage.setItem("lowStockThreshold", lowStockThreshold.toString());
+        localStorage.setItem("highStockThreshold", highStockThreshold.toString());
+    }, [lowStockThreshold, highStockThreshold]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, statusFilter]);
+
+    const filteredBooks = useMemo(() => {
+        return books.filter((book) => {
+            const matchesSearch =
+                book.judul.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                book.penulis.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                book.penerbit.toLowerCase().includes(searchTerm.toLowerCase());
+            
+            let matchesStatus = true;
+            if (statusFilter === "high") {
+                matchesStatus = book.stok >= highStockThreshold;
+            } else if (statusFilter === "low") {
+                matchesStatus = book.stok >= 1 && book.stok <= lowStockThreshold;
+            } else if (statusFilter === "out") {
+                matchesStatus = book.stok === 0;
+            }
+            
+            return matchesSearch && matchesStatus;
+        });
+    }, [books, searchTerm, statusFilter, lowStockThreshold, highStockThreshold]);
+
+    const totalPages = Math.ceil(filteredBooks.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const currentBooks = filteredBooks.slice(startIndex, endIndex);
 
     const stats = {
         total: books.length,
-        high: books.filter((b) => b.stok > 10).length,
-        low: books.filter((b) => b.stok >= 1 && b.stok <= 5).length,
+        high: books.filter((b) => b.stok >= highStockThreshold).length,
+        low: books.filter((b) => b.stok >= 1 && b.stok <= lowStockThreshold).length,
         outOfStock: books.filter((b) => b.stok === 0).length,
     };
 
@@ -339,7 +496,6 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
             cancelButtonText: "Batal",
             reverseButtons: true,
         });
-
         if (!result.isConfirmed) return;
 
         const token = localStorage.getItem("admin_token");
@@ -378,6 +534,9 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
             if (res.ok) {
                 Swal.fire("Berhasil", "Buku berhasil dihapus.", "success");
                 onRefresh();
+                if (currentBooks.length === 1 && currentPage > 1) {
+                    setCurrentPage(currentPage - 1);
+                }
             } else {
                 const err = await res.json().catch(() => ({}));
                 Swal.fire(
@@ -407,7 +566,6 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
             cancelButtonText: "Batal",
             reverseButtons: true,
         });
-
         if (!result.isConfirmed) return;
 
         const token = localStorage.getItem("admin_token");
@@ -456,6 +614,7 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                 Swal.fire("Berhasil", "Buku berhasil dihapus.", "success");
                 onRefresh();
                 setSelectedIds(new Set());
+                setCurrentPage(1);
             } else {
                 const err = await response.json().catch(() => ({}));
                 Swal.fire(
@@ -487,22 +646,82 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
 
     const getStockColor = (stok) => {
         if (stok === 0) return "bg-red-100 text-red-800 border-red-200";
-        if (stok <= 5) return "bg-orange-100 text-orange-800 border-orange-200";
+        if (stok <= lowStockThreshold) return "bg-orange-100 text-orange-800 border-orange-200";
         return "bg-green-100 text-green-800 border-green-200";
     };
 
-    const renderKategori = (kategoriString) => {
-        if (!kategoriString)
+    const renderKategori = (kategori) => {
+        if (!kategori) {
             return <span className="text-muted-foreground">–</span>;
-        return kategoriString.split(",").map((k, i) => (
-            <Badge
-                key={i}
-                variant="secondary"
-                className="bg-purple-100 text-purple-800 border-purple-200 text-xs mr-1 mb-1"
-            >
-                {k.trim()}
-            </Badge>
-        ));
+        }
+
+        if (Array.isArray(kategori)) {
+            if (kategori.length === 0) {
+                return <span className="text-muted-foreground">–</span>;
+            }
+            return kategori.map((k, i) => (
+                <Badge
+                    key={i}
+                    variant="secondary"
+                    className="bg-purple-100 text-purple-800 border-purple-200 text-xs mr-1 mb-1"
+                >
+                    {k}
+                </Badge>
+            ));
+        }
+
+        if (typeof kategori === 'string') {
+            const categories = kategori.split(",").filter(k => k.trim());
+            if (categories.length === 0) {
+                return <span className="text-muted-foreground">–</span>;
+            }
+            return categories.map((k, i) => (
+                <Badge
+                    key={i}
+                    variant="secondary"
+                    className="bg-purple-100 text-purple-800 border-purple-200 text-xs mr-1 mb-1"
+                >
+                    {k.trim()}
+                </Badge>
+            ));
+        }
+
+        return <span className="text-muted-foreground">–</span>;
+    };
+
+    const handleSaveSettings = () => {
+        if (lowStockThreshold < 1) {
+            Swal.fire({
+                icon: "error",
+                title: "Konfigurasi Tidak Valid",
+                text: "Batas stok rendah minimal 1",
+                background: "#1e293b",
+                color: "#f1f5f9",
+            });
+            return;
+        }
+
+        if (highStockThreshold < 1) {
+            Swal.fire({
+                icon: "error",
+                title: "Konfigurasi Tidak Valid",
+                text: "Batas stok tinggi minimal 1",
+                background: "#1e293b",
+                color: "#f1f5f9",
+            });
+            return;
+        }
+
+        Swal.fire({
+            icon: "success",
+            title: "Pengaturan Disimpan",
+            text: "Batas stok berhasil diperbarui",
+            background: "#1e293b",
+            color: "#f1f5f9",
+            timer: 1500,
+            showConfirmButton: false,
+        });
+        setIsSettingsOpen(false);
     };
 
     if (!Array.isArray(books)) {
@@ -525,7 +744,6 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
 
             <div className="min-h-screen bg-background p-4 sm:p-6">
                 <div className="max-w-7xl mx-auto">
-                    {/* Header */}
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 md:mb-8 gap-4">
                         <div>
                             <h1 className="text-2xl sm:text-3xl font-bold bg-linear-to-r from-primary to-purple-600 bg-clip-text text-transparent">
@@ -535,18 +753,26 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                 Kelola semua buku dalam inventori Anda
                             </p>
                         </div>
-                        <Link to="/admin/upload" className="w-full md:w-auto">
-                            <Button className="gap-2 cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300 bg-purple-600 border-0 w-full md:w-auto">
-                                <BookOpen className="w-4 h-4" />
-                                <span className="hidden sm:inline">
-                                    Tambah Buku Baru
-                                </span>
-                                <span className="sm:hidden">Tambah Buku</span>
+                        <div className="flex gap-3 w-full md:w-auto">
+                            <Button
+                                onClick={() => setIsSettingsOpen(true)}
+                                variant="outline"
+                                className="gap-2 cursor-pointer w-full md:w-auto"
+                            >
+                                <Settings className="w-4 h-4" />
+                                <span className="hidden sm:inline">Pengaturan Stok</span>
+                                <span className="sm:hidden">Stok</span>
                             </Button>
-                        </Link>
+                            <Link to="/admin/upload" className="w-full md:w-auto">
+                                <Button className="gap-2 cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300 bg-purple-600 border-0 w-full md:w-auto">
+                                    <BookOpen className="w-4 h-4" />
+                                    <span className="hidden sm:inline">Tambah Buku Baru</span>
+                                    <span className="sm:hidden">Tambah Buku</span>
+                                </Button>
+                            </Link>
+                        </div>
                     </div>
 
-                    {/* Stats Cards */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6 md:mb-8">
                         <Card className="bg-white/80 backdrop-blur-sm border-l-4 border-l-blue-500 shadow-lg">
                             <CardContent className="p-3 sm:p-4">
@@ -565,13 +791,12 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                 </div>
                             </CardContent>
                         </Card>
-
                         <Card className="bg-white/80 backdrop-blur-sm border-l-4 border-l-green-500 shadow-lg">
                             <CardContent className="p-3 sm:p-4">
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-xs font-medium text-muted-foreground mb-1">
-                                            Stok Tinggi
+                                            Stok Tinggi (&gt;={highStockThreshold})
                                         </p>
                                         <p className="text-lg sm:text-xl font-bold">
                                             {stats.high}
@@ -583,13 +808,12 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                 </div>
                             </CardContent>
                         </Card>
-
                         <Card className="bg-white/80 backdrop-blur-sm border-l-4 border-l-orange-500 shadow-lg">
                             <CardContent className="p-3 sm:p-4">
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-xs font-medium text-muted-foreground mb-1">
-                                            Stok Rendah
+                                            Stok Rendah (1-{lowStockThreshold})
                                         </p>
                                         <p className="text-lg sm:text-xl font-bold">
                                             {stats.low}
@@ -601,7 +825,6 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                 </div>
                             </CardContent>
                         </Card>
-
                         <Card className="bg-white/80 backdrop-blur-sm border-l-4 border-l-red-500 shadow-lg">
                             <CardContent className="p-3 sm:p-4">
                                 <div className="flex items-center justify-between">
@@ -621,7 +844,6 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                         </Card>
                     </div>
 
-                    {/* Search and Filter Section */}
                     <Card className="bg-white/80 backdrop-blur-sm shadow-lg mb-4 md:mb-6">
                         <CardContent className="p-4 md:p-6">
                             <div className="flex flex-col gap-4">
@@ -653,10 +875,10 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                                 Semua Status
                                             </option>
                                             <option value="high">
-                                                Stok Tinggi (&gt;10)
+                                                Stok Tinggi (&gt;={highStockThreshold})
                                             </option>
                                             <option value="low">
-                                                Stok Rendah (1-5)
+                                                Stok Rendah (1-{lowStockThreshold})
                                             </option>
                                             <option value="out">Habis</option>
                                         </select>
@@ -682,17 +904,22 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                         </CardContent>
                     </Card>
 
-                    {/* Books List - Mobile View */}
+                    <div className="mb-4 flex justify-between items-center">
+                        <div className="text-sm text-muted-foreground">
+                            Menampilkan {startIndex + 1}-{Math.min(endIndex, filteredBooks.length)} dari {filteredBooks.length} buku
+                        </div>
+                    </div>
+
                     {isMobile ? (
                         <div className="space-y-4">
-                            {filteredBooks.length === 0 ? (
+                            {currentBooks.length === 0 ? (
                                 <Card className="bg-white/80 backdrop-blur-sm shadow-lg">
                                     <CardContent className="p-8 text-center text-muted-foreground">
                                         Tidak ada buku yang ditemukan.
                                     </CardContent>
                                 </Card>
                             ) : (
-                                filteredBooks.map((book) => (
+                                currentBooks.map((book) => (
                                     <MobileBookCard
                                         key={book.buku_id}
                                         book={book}
@@ -703,302 +930,335 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                         deletingId={deletingId}
                                         mobileMenuOpen={mobileMenuOpen}
                                         setMobileMenuOpen={setMobileMenuOpen}
+                                        lowStockThreshold={lowStockThreshold}
+                                        highStockThreshold={highStockThreshold}
                                     />
                                 ))
                             )}
                         </div>
                     ) : (
-                        <Card className="bg-white/80 backdrop-blur-sm shadow-lg border-0 overflow-hidden">
-                            <div className="overflow-x-auto">
-                                <div className="min-w-250">
-                                    <table className="w-full text-sm">
-                                        <thead>
-                                            <tr className="border-b border-border bg-linear-to-r from-slate-50 to-blue-50/50">
-                                                <th className="px-4 md:px-6 py-3 md:py-4 text-center font-semibold text-foreground whitespace-nowrap w-12">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={
-                                                            selectedIds.size >
-                                                                0 &&
-                                                            selectedIds.size ===
-                                                                filteredBooks.length
-                                                        }
-                                                        onChange={(e) => {
-                                                            if (
-                                                                e.target.checked
-                                                            ) {
-                                                                setSelectedIds(
-                                                                    new Set(
-                                                                        filteredBooks.map(
-                                                                            (
-                                                                                b
-                                                                            ) =>
-                                                                                b.buku_id
-                                                                        )
-                                                                    )
-                                                                );
-                                                            } else {
-                                                                setSelectedIds(
-                                                                    new Set()
-                                                                );
+                        <>
+                            <Card className="bg-white/80 backdrop-blur-sm shadow-lg border-0 overflow-hidden">
+                                <div className="overflow-x-auto">
+                                    <div className="min-w-250">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                <tr className="border-b border-border bg-linear-to-r from-slate-50 to-blue-50/50">
+                                                    <th className="px-4 md:px-6 py-3 md:py-4 text-center font-semibold text-foreground whitespace-nowrap w-12">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={
+                                                                selectedIds.size >
+                                                                    0 &&
+                                                                selectedIds.size ===
+                                                                    currentBooks.length
                                                             }
-                                                        }}
-                                                        className="rounded border-border text-primary focus:ring-primary cursor-pointer w-4 h-4"
-                                                    />
-                                                </th>
-                                                <th className="px-4 md:px-6 py-3 md:py-4 text-left font-semibold text-foreground whitespace-nowrap">
-                                                    Buku
-                                                </th>
-                                                <th className="px-4 md:px-6 py-3 md:py-4 text-left font-semibold text-foreground whitespace-nowrap">
-                                                    Informasi
-                                                </th>
-                                                <th className="px-4 md:px-6 py-3 md:py-4 text-left font-semibold text-foreground whitespace-nowrap">
-                                                    Stok & Kondisi
-                                                </th>
-                                                <th className="px-4 md:px-6 py-3 md:py-4 text-left font-semibold text-foreground whitespace-nowrap">
-                                                    Kategori
-                                                </th>
-                                                <th className="px-4 md:px-6 py-3 md:py-4 text-left font-semibold text-foreground whitespace-nowrap">
-                                                    Harga
-                                                </th>
-                                                <th className="px-4 md:px-6 py-3 md:py-4 text-center font-semibold text-foreground whitespace-nowrap">
-                                                    Aksi
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {filteredBooks.length === 0 ? (
-                                                <tr>
-                                                    <td
-                                                        colSpan="7"
-                                                        className="px-6 py-8 text-center text-muted-foreground"
-                                                    >
-                                                        Tidak ada buku yang
-                                                        ditemukan.
-                                                    </td>
-                                                </tr>
-                                            ) : (
-                                                filteredBooks.map((book) => (
-                                                    <tr
-                                                        key={book.buku_id}
-                                                        className="border-b border-border hover:bg-muted/50"
-                                                    >
-                                                        <td className="px-4 md:px-6 py-3 md:py-4 text-center whitespace-nowrap">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={selectedIds.has(
-                                                                    book.buku_id
-                                                                )}
-                                                                onChange={(
-                                                                    e
-                                                                ) => {
-                                                                    const newSelected =
-                                                                        new Set(
-                                                                            selectedIds
-                                                                        );
-                                                                    if (
-                                                                        e.target
-                                                                            .checked
-                                                                    ) {
-                                                                        newSelected.add(
-                                                                            book.buku_id
-                                                                        );
-                                                                    } else {
-                                                                        newSelected.delete(
-                                                                            book.buku_id
-                                                                        );
-                                                                    }
+                                                            onChange={(e) => {
+                                                                if (
+                                                                    e.target.checked
+                                                                ) {
                                                                     setSelectedIds(
-                                                                        newSelected
+                                                                        new Set(
+                                                                            currentBooks.map(
+                                                                                (
+                                                                                    b
+                                                                                ) =>
+                                                                                    b.buku_id
+                                                                            )
+                                                                        )
                                                                     );
-                                                                }}
-                                                                className="rounded border-border text-primary focus:ring-primary cursor-pointer w-4 h-4"
-                                                            />
+                                                                } else {
+                                                                    setSelectedIds(
+                                                                        new Set()
+                                                                    );
+                                                                }
+                                                            }}
+                                                            className="rounded border-border text-primary focus:ring-primary cursor-pointer w-4 h-4"
+                                                        />
+                                                    </th>
+                                                    <th className="px-4 md:px-6 py-3 md:py-4 text-left font-semibold text-foreground whitespace-nowrap">
+                                                        Buku
+                                                    </th>
+                                                    <th className="px-4 md:px-6 py-3 md:py-4 text-left font-semibold text-foreground whitespace-nowrap">
+                                                        Informasi
+                                                    </th>
+                                                    <th className="px-4 md:px-6 py-3 md:py-4 text-left font-semibold text-foreground whitespace-nowrap">
+                                                        Stok & Kondisi
+                                                    </th>
+                                                    <th className="px-4 md:px-6 py-3 md:py-4 text-left font-semibold text-foreground whitespace-nowrap">
+                                                        Kategori
+                                                    </th>
+                                                    <th className="px-4 md:px-6 py-3 md:py-4 text-left font-semibold text-foreground whitespace-nowrap">
+                                                        Harga
+                                                    </th>
+                                                    <th className="px-4 md:px-6 py-3 md:py-4 text-center font-semibold text-foreground whitespace-nowrap">
+                                                        Aksi
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {currentBooks.length === 0 ? (
+                                                    <tr>
+                                                        <td
+                                                            colSpan="7"
+                                                            className="px-6 py-8 text-center text-muted-foreground"
+                                                        >
+                                                            Tidak ada buku yang
+                                                            ditemukan.
                                                         </td>
-                                                        <td className="px-4 md:px-6 py-3 md:py-4 whitespace-nowrap">
-                                                            <div className="flex items-center gap-3">
-                                                                <img
-                                                                    src={
-                                                                        book.foto
-                                                                    }
-                                                                    alt={
-                                                                        book.judul
-                                                                    }
-                                                                    width={60}
-                                                                    height={80}
-                                                                    className="rounded object-cover"
+                                                    </tr>
+                                                ) : (
+                                                    currentBooks.map((book) => (
+                                                        <tr
+                                                            key={book.buku_id}
+                                                            className="border-b border-border hover:bg-muted/50"
+                                                        >
+                                                            <td className="px-4 md:px-6 py-3 md:py-4 text-center whitespace-nowrap">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={selectedIds.has(
+                                                                        book.buku_id
+                                                                    )}
+                                                                    onChange={(
+                                                                        e
+                                                                    ) => {
+                                                                        const newSelected =
+                                                                            new Set(
+                                                                                selectedIds
+                                                                            );
+                                                                        if (
+                                                                            e.target
+                                                                                .checked
+                                                                        ) {
+                                                                            newSelected.add(
+                                                                                book.buku_id
+                                                                            );
+                                                                        } else {
+                                                                            newSelected.delete(
+                                                                                book.buku_id
+                                                                            );
+                                                                        }
+                                                                        setSelectedIds(
+                                                                            newSelected
+                                                                        );
+                                                                    }}
+                                                                    className="rounded border-border text-primary focus:ring-primary cursor-pointer w-4 h-4"
                                                                 />
-                                                                <div className="min-w-0">
-                                                                    <p className="font-medium text-foreground truncate">
-                                                                        {
+                                                            </td>
+                                                            <td className="px-4 md:px-6 py-3 md:py-4 whitespace-nowrap">
+                                                                <div className="flex items-center gap-3">
+                                                                    <img
+                                                                        src={
+                                                                            book.foto
+                                                                        }
+                                                                        alt={
                                                                             book.judul
                                                                         }
-                                                                    </p>
-                                                                    <p className="text-muted-foreground text-sm truncate">
-                                                                        {
-                                                                            book.penulis
+                                                                        width={
+                                                                            60
                                                                         }
-                                                                    </p>
-                                                                    <p className="text-muted-foreground text-xs truncate">
-                                                                        {
-                                                                            book.penerbit
+                                                                        height={
+                                                                            80
                                                                         }
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-4 md:px-6 py-3 md:py-4">
-                                                            <div className="space-y-1">
-                                                                <p className="text-sm text-muted-foreground">
-                                                                    ISBN:{" "}
-                                                                    {book.isbn ||
-                                                                        "–"}
-                                                                </p>
-                                                                <p className="text-sm text-muted-foreground">
-                                                                    Tahun:{" "}
-                                                                    {book.tahun}
-                                                                </p>
-                                                                <p className="text-sm text-muted-foreground">
-                                                                    Deskripsi:
-                                                                </p>
-                                                                <div className="max-w-xs">
-                                                                    <TruncatedText
-                                                                        text={
-                                                                            book.deskripsi
-                                                                        }
-                                                                        maxLength={
-                                                                            75
-                                                                        }
+                                                                        className="rounded object-cover"
                                                                     />
+                                                                    <div className="min-w-0">
+                                                                        <p className="font-medium text-foreground truncate">
+                                                                            {
+                                                                                book.judul
+                                                                            }
+                                                                        </p>
+                                                                        <p className="text-muted-foreground text-sm truncate">
+                                                                            {
+                                                                                book.penulis
+                                                                            }
+                                                                        </p>
+                                                                        <p className="text-muted-foreground text-xs truncate">
+                                                                            {
+                                                                                book.penerbit
+                                                                            }
+                                                                        </p>
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-4 md:px-6 py-3 md:py-4 whitespace-nowrap">
-                                                            <div className="space-y-2">
-                                                                <Badge
-                                                                    className={`${getStockColor(
-                                                                        book.stok
-                                                                    )} border px-2 py-1 rounded`}
-                                                                >
-                                                                    Stok:{" "}
-                                                                    {book.stok}
-                                                                </Badge>
-                                                                <Badge
-                                                                    className={`${getConditionColor(
-                                                                        book.kondisi
-                                                                    )} border px-2 py-1 rounded`}
-                                                                >
-                                                                    {
-                                                                        book.kondisi
-                                                                    }
-                                                                </Badge>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-4 md:px-6 py-3 md:py-4">
-                                                            {renderKategori(
-                                                                book.kategori
-                                                            )}
-                                                        </td>
-                                                        <td className="px-4 md:px-6 py-3 md:py-4">
-                                                            {book.promo_info ? (
-                                                                <div className="flex flex-col">
-                                                                    <span className="line-through text-muted-foreground text-sm">
+                                                            </td>
+                                                            <td className="px-4 md:px-6 py-3 md:py-4">
+                                                                <div className="space-y-1">
+                                                                    <p className="text-sm text-muted-foreground">
+                                                                        ISBN:{" "}
+                                                                        {book.isbn ||
+                                                                            "–"}
+                                                                    </p>
+                                                                    <p className="text-sm text-muted-foreground">
+                                                                        Tahun:{" "}
+                                                                        {book.tahun}
+                                                                    </p>
+                                                                    <p className="text-sm text-muted-foreground">
+                                                                        Deskripsi:
+                                                                    </p>
+                                                                    <div className="max-w-xs">
+                                                                        <TruncatedText
+                                                                            text={
+                                                                                book.deskripsi
+                                                                            }
+                                                                            maxLength={
+                                                                                75
+                                                                            }
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-4 md:px-6 py-3 md:py-4 whitespace-nowrap">
+                                                                <div className="space-y-2">
+                                                                    <Badge
+                                                                        className={`${getStockColor(
+                                                                            book.stok
+                                                                        )} border px-2 py-1 rounded`}
+                                                                    >
+                                                                        Stok:{" "}
+                                                                        {book.stok}
+                                                                    </Badge>
+                                                                    <Badge
+                                                                        className={`${getConditionColor(
+                                                                            book.kondisi
+                                                                        )} border px-2 py-1 rounded`}
+                                                                    >
+                                                                        {
+                                                                            book.kondisi
+                                                                        }
+                                                                    </Badge>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-4 md:px-6 py-3 md:py-4">
+                                                                {renderKategori(
+                                                                    book.kategori
+                                                                )}
+                                                            </td>
+                                                            <td className="px-4 md:px-6 py-3 md:py-4">
+                                                                {book.promo_info ? (
+                                                                    <div className="flex flex-col">
+                                                                        <span className="line-through text-muted-foreground text-sm">
+                                                                            Rp{" "}
+                                                                            {book.harga?.toLocaleString(
+                                                                                "id-ID"
+                                                                            )}
+                                                                        </span>
+                                                                        <span className="font-semibold text-primary">
+                                                                            Rp{" "}
+                                                                            {book.promo_info.harga_setelah_diskon?.toLocaleString(
+                                                                                "id-ID"
+                                                                            )}
+                                                                            <span className="ml-1 text-xs bg-red-100 text-red-800 px-1 rounded">
+                                                                                -
+                                                                                {
+                                                                                    book
+                                                                                        .promo_info
+                                                                                        .diskon_persen
+                                                                                }
+                                                                                %
+                                                                            </span>
+                                                                        </span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <span className="font-semibold text-foreground">
                                                                         Rp{" "}
                                                                         {book.harga?.toLocaleString(
                                                                             "id-ID"
                                                                         )}
                                                                     </span>
-                                                                    <span className="font-semibold text-primary">
-                                                                        Rp{" "}
-                                                                        {book.promo_info.harga_setelah_diskon?.toLocaleString(
-                                                                            "id-ID"
-                                                                        )}
-                                                                        <span className="ml-1 text-xs bg-red-100 text-red-800 px-1 rounded">
-                                                                            -
-                                                                            {
-                                                                                book
-                                                                                    .promo_info
-                                                                                    .diskon_persen
-                                                                            }
-                                                                            %
-                                                                        </span>
-                                                                    </span>
-                                                                </div>
-                                                            ) : (
-                                                                <span className="font-semibold text-foreground">
-                                                                    Rp{" "}
-                                                                    {book.harga?.toLocaleString(
-                                                                        "id-ID"
-                                                                    )}
-                                                                </span>
-                                                            )}
-                                                        </td>
-                                                        <td className="px-4 md:px-6 py-3 md:py-4 whitespace-nowrap">
-                                                            <div className="flex items-center justify-center gap-1">
-                                                                <button
-                                                                    onClick={() =>
-                                                                        setSelectedBook(
-                                                                            book
-                                                                        )
-                                                                    }
-                                                                    className="cursor-pointer rounded-lg p-2 hover:bg-blue-100 text-blue-600 transition-all duration-200 hover:scale-110"
-                                                                    title="Lihat detail"
-                                                                >
-                                                                    <Eye
-                                                                        size={
-                                                                            16
-                                                                        }
-                                                                    />
-                                                                </button>
-                                                                <Link
-                                                                    to={`/admin/inventory/${book.buku_id}`}
-                                                                >
+                                                                )}
+                                                            </td>
+                                                            <td className="px-4 md:px-6 py-3 md:py-4 whitespace-nowrap">
+                                                                <div className="flex items-center justify-center gap-1">
                                                                     <button
-                                                                        className="cursor-pointer rounded-lg p-2 hover:bg-green-100 text-green-600 transition-all duration-200 hover:scale-110"
-                                                                        title="Edit buku"
+                                                                        onClick={() =>
+                                                                            setSelectedBook(
+                                                                                book
+                                                                            )
+                                                                        }
+                                                                        className="cursor-pointer rounded-lg p-2 hover:bg-blue-100 text-blue-600 transition-all duration-200 hover:scale-110"
+                                                                        title="Lihat detail"
                                                                     >
-                                                                        <Edit2
+                                                                        <Eye
                                                                             size={
                                                                                 16
                                                                             }
                                                                         />
                                                                     </button>
-                                                                </Link>
-                                                                <button
-                                                                    onClick={() =>
-                                                                        handleDelete(
-                                                                            book.buku_id,
-                                                                            book.foto
-                                                                        )
-                                                                    }
-                                                                    disabled={
-                                                                        deletingId ===
-                                                                        book.buku_id
-                                                                    }
-                                                                    className="cursor-pointer rounded-lg p-2 hover:bg-red-100 text-red-600 transition-all duration-200 hover:scale-110 disabled:opacity-50"
-                                                                    title="Hapus buku"
-                                                                >
-                                                                    <Trash2
-                                                                        size={
-                                                                            16
+                                                                    <Link
+                                                                        to={`/admin/inventory/${book.buku_id}`}
+                                                                    >
+                                                                        <button
+                                                                            className="cursor-pointer rounded-lg p-2 hover:bg-green-100 text-green-600 transition-all duration-200 hover:scale-110"
+                                                                            title="Edit buku"
+                                                                        >
+                                                                            <Edit2
+                                                                                size={
+                                                                                    16
+                                                                                }
+                                                                            />
+                                                                        </button>
+                                                                    </Link>
+                                                                    <button
+                                                                        onClick={() =>
+                                                                            handleDelete(
+                                                                                book.buku_id,
+                                                                                book.foto
+                                                                            )
                                                                         }
-                                                                    />
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))
-                                            )}
-                                        </tbody>
-                                    </table>
+                                                                        disabled={
+                                                                            deletingId ===
+                                                                            book.buku_id
+                                                                        }
+                                                                        className="cursor-pointer rounded-lg p-2 hover:bg-red-100 text-red-600 transition-all duration-200 hover:scale-110 disabled:opacity-50"
+                                                                        title="Hapus buku"
+                                                                    >
+                                                                        <Trash2
+                                                                            size={
+                                                                                16
+                                                                            }
+                                                                        />
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
-                            </div>
-                        </Card>
+                            </Card>
+
+                            {filteredBooks.length > 0 && (
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={totalPages}
+                                    onPageChange={setCurrentPage}
+                                    itemsPerPage={itemsPerPage}
+                                    onItemsPerPageChange={(value) => {
+                                        setItemsPerPage(value);
+                                        setCurrentPage(1);
+                                    }}
+                                />
+                            )}
+                        </>
+                    )}
+
+                    {isMobile && filteredBooks.length > 0 && (
+                        <Pagination
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            onPageChange={setCurrentPage}
+                            itemsPerPage={itemsPerPage}
+                            onItemsPerPageChange={(value) => {
+                                setItemsPerPage(value);
+                                setCurrentPage(1);
+                            }}
+                        />
                     )}
                 </div>
             </div>
 
-            {/* Modal Detail Buku */}
             {selectedBook && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4 backdrop-blur-sm"
@@ -1008,7 +1268,6 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                         className="w-full max-w-4xl rounded-xl bg-white shadow-2xl flex flex-col md:flex-row max-h-[90vh] overflow-hidden border-0"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* Bagian Gambar */}
                         <div className="md:w-2/5 p-4 sm:p-6 md:p-8 flex flex-col bg-linear-to-b from-slate-50 to-blue-50/30">
                             <div className="flex-1 flex items-center justify-center">
                                 {selectedBook.foto ? (
@@ -1027,7 +1286,6 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                             </div>
                         </div>
 
-                        {/* Bagian Detail */}
                         <div className="md:w-3/5 p-4 sm:p-6 md:p-8 border-t md:border-t-0 md:border-l border-border overflow-y-auto">
                             <div className="space-y-4 sm:space-y-6">
                                 <div>
@@ -1038,7 +1296,6 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                         {selectedBook.penulis}
                                     </p>
                                 </div>
-
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                                     <div>
                                         <p className="font-semibold text-xs sm:text-sm text-muted-foreground">
@@ -1140,7 +1397,6 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                         )}
                                     </div>
                                 </div>
-
                                 <div>
                                     <p className="font-semibold text-xs sm:text-sm text-muted-foreground mb-2">
                                         Deskripsi
@@ -1158,7 +1414,6 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                         )}
                                     </div>
                                 </div>
-
                                 <div>
                                     <p className="font-semibold text-xs sm:text-sm text-muted-foreground mb-2">
                                         Kategori
@@ -1168,7 +1423,6 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                     </div>
                                 </div>
                             </div>
-
                             <div className="mt-4 sm:mt-6 flex gap-2 sm:gap-3 pt-4 border-t border-border">
                                 <Button
                                     variant="outline"
@@ -1190,6 +1444,92 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                     </div>
                 </div>
             )}
+
+            <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center justify-between">
+                            <span>Pengaturan Batas Stok</span>
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-4"> 
+                        <div>
+                            <Label htmlFor="low-stock" className="text-sm font-medium">
+                                Batas Stok Rendah
+                            </Label>
+                            <Input
+                                id="low-stock"
+                                type="number"
+                                value={lowStockThreshold}
+                                onChange={(e) => {
+                                    const value = parseInt(e.target.value);
+                                    if (!isNaN(value) && value >= 1) {
+                                        setLowStockThreshold(value);
+                                    }
+                                }}
+                                min="1"
+                                className="mt-2"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Buku dengan stok 1-{lowStockThreshold} akan ditandai sebagai stok rendah
+                            </p>
+                        </div>
+
+                        <div>
+                            <Label htmlFor="high-stock" className="text-sm font-medium">
+                                Batas Stok Tinggi
+                            </Label>
+                            <Input
+                                id="high-stock"
+                                type="number"
+                                value={highStockThreshold}
+                                onChange={(e) => {
+                                    const value = parseInt(e.target.value);
+                                    if (!isNaN(value) && value >= 1) {
+                                        setHighStockThreshold(value);
+                                    }
+                                }}
+                                min="1"
+                                className="mt-2"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Buku dengan stok ≥ {highStockThreshold} akan ditandai sebagai stok tinggi
+                            </p>
+                        </div>
+
+                        <div className="flex gap-2 justify-end pt-4 border-t border-border">
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    setLowStockThreshold(5);
+                                    setHighStockThreshold(10);
+                                }}
+                                className="cursor-pointer"
+                            >
+                                Reset Default
+                            </Button>
+                            <Button
+                                onClick={handleSaveSettings}
+                                className="cursor-pointer"
+                            >
+                                Simpan Pengaturan
+                            </Button>
+                        </div>
+
+                        <div className="bg-muted/30 p-3 rounded-lg">
+                            <p className="text-sm font-medium mb-2">Keterangan:</p>
+                            <ul className="text-xs space-y-1 text-muted-foreground">
+                                <li>• Stok Rendah: 1-{lowStockThreshold} item</li>
+                                <li>• Stok Tinggi: ≥ {highStockThreshold} item</li>
+                                <li>• Habis: 0 item</li>
+                                <li>• Kedua batas dapat diatur secara independen</li>
+                                <li>• Pengaturan ini disimpan di browser Anda</li>
+                            </ul>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </Sidebar>
     );
 }

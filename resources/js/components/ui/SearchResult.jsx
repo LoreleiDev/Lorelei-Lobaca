@@ -319,7 +319,7 @@ export default function SearchResults() {
                     })}
                 </div>
                 <div className="flex justify-center mt-6">
-                    <Link to="/buku" className="text-xs md:text-sm font-bold text-yellow-600 hover:text-yellow-200 transition-colors">
+                    <Link to="/buku" className="text-xs md:text-sm font-bold text-black hover:text-gray-700 transition-colors">
                         Lihat Semua Buku →
                     </Link>
                 </div>

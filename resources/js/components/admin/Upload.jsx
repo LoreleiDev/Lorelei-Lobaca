@@ -5,19 +5,21 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
 import { Card } from "../../components/ui/card";
-import { Upload } from "lucide-react";
+import { Upload, Plus } from "lucide-react";
 import Sidebar from "./ui/Sidebar";
 import Loading from "../ui/Loading";
+import CategoryManagerModal from "./ui/CategoryModal";
 
 export default function BookUpload() {
     document.title = "Upload - Lobaca Admin";
+    
     const [formData, setFormData] = useState({
         judul: "",
         penulis: "",
         penerbit: "",
         stok: "",
         kondisi: "",
-        kategori: [], 
+        kategori: [],
         foto: null,
         deskripsi: "",
         harga: "",
@@ -31,6 +33,9 @@ export default function BookUpload() {
     const [isLoading, setIsLoading] = useState(false);
     const [loadingAdmin, setLoadingAdmin] = useState(true);
     const [showUploadLoading, setShowUploadLoading] = useState(false);
+    const [availableCategories, setAvailableCategories] = useState([]);
+    const [loadingCategories, setLoadingCategories] = useState(false);
+    const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
 
     const showToast = (icon, title) => {
         Swal.fire({
@@ -46,6 +51,7 @@ export default function BookUpload() {
         });
     };
 
+    // Fetch admin data
     useEffect(() => {
         const fetchAdminData = async () => {
             const token = localStorage.getItem("admin_token");
@@ -83,6 +89,36 @@ export default function BookUpload() {
         };
 
         fetchAdminData();
+    }, []);
+
+    // Fetch categories
+    useEffect(() => {
+        const fetchCategories = async () => {
+            setLoadingCategories(true);
+            try {
+                const token = localStorage.getItem("admin_token");
+                const res = await fetch("/api/admin/categories", {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        Accept: "application/json",
+                    },
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    setAvailableCategories(data);
+                } else {
+                    showToast("error", "Gagal memuat kategori.");
+                }
+            } catch (error) {
+                console.error("Failed to fetch categories:", error);
+                showToast("error", "Gagal memuat kategori.");
+            } finally {
+                setLoadingCategories(false);
+            }
+        };
+
+        fetchCategories();
     }, []);
 
     const handleInputChange = (e) => {
@@ -163,7 +199,7 @@ export default function BookUpload() {
             }
         }
 
-        if (formData.kategori.length === 0) {
+        if (!Array.isArray(formData.kategori) || formData.kategori.length === 0) {
             showToast("error", "Pilih minimal satu kategori.");
             return false;
         }
@@ -250,13 +286,16 @@ export default function BookUpload() {
                 fotoUrl = data.secure_url;
             }
 
+            // Convert kategori to array of numbers
+            const kategoriIds = formData.kategori.map(id => parseInt(id));
+
             const payload = {
                 judul: formData.judul,
                 penulis: formData.penulis,
                 penerbit: formData.penerbit,
                 stok: parseInt(formData.stok, 10),
                 kondisi: formData.kondisi,
-                kategori: formData.kategori.join(","), 
+                kategori: kategoriIds, 
                 foto: fotoUrl,
                 deskripsi: formData.deskripsi,
                 harga: parseInt(formData.harga, 10),
@@ -284,7 +323,7 @@ export default function BookUpload() {
                     penerbit: "",
                     stok: "",
                     kondisi: "",
-                    kategori: [], 
+                    kategori: [],
                     foto: null,
                     deskripsi: "",
                     harga: "",
@@ -392,75 +431,89 @@ export default function BookUpload() {
                         </div>
 
                         <div className="md:col-span-2">
-                            <Label className="text-sm font-medium">
-                                Kategori *
-                                <span className="text-xs text-muted-foreground ml-2">
-                                    (Pilih satu atau lebih)
-                                </span>
-                            </Label>
-                            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                                {[
-                                    { value: "fiksi", label: "Fiksi" },
-                                    { value: "non_fiksi", label: "Non-Fiksi" },
-                                    {
-                                        value: "seni_kreatif",
-                                        label: "Seni & Kreatif",
-                                    },
-                                    {
-                                        value: "gaya_hidup",
-                                        label: "Gaya Hidup",
-                                    },
-                                    {
-                                        value: "pendidikan",
-                                        label: "Pendidikan",
-                                    },
-                                    { value: "buku_anak", label: "Buku Anak" },
-                                    { value: "komik", label: "Komik" },
-                                    { value: "novel", label: "Novel" },
-                                    { value: "majalah", label: "Majalah" },
-                                ].map((item) => (
-                                    <label
-                                        key={item.value}
-                                        className="flex items-center space-x-2 cursor-pointer"
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            value={item.value}
-                                            checked={formData.kategori.includes(
-                                                item.value
-                                            )}
-                                            onChange={(e) => {
-                                                const value = e.target.value;
-                                                setFormData((prev) => {
-                                                    if (e.target.checked) {
-                                                        return {
-                                                            ...prev,
-                                                            kategori: [
-                                                                ...prev.kategori,
-                                                                value,
-                                                            ],
-                                                        };
-                                                    } else {
-                                                        return {
-                                                            ...prev,
-                                                            kategori:
-                                                                prev.kategori.filter(
-                                                                    (k) =>
-                                                                        k !==
-                                                                        value
-                                                                ),
-                                                        };
-                                                    }
-                                                });
-                                            }}
-                                            className="rounded border-border text-primary focus:ring-primary"
-                                        />
-                                        <span className="text-foreground">
-                                            {item.label}
-                                        </span>
-                                    </label>
-                                ))}
+                            <div className="flex items-center justify-between mb-2">
+                                <Label className="text-sm font-medium">
+                                    Kategori *
+                                    <span className="text-xs text-muted-foreground ml-2">
+                                        (Pilih satu atau lebih)
+                                    </span>
+                                </Label>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setIsCategoryModalOpen(true)}
+                                    className="h-8"
+                                >
+                                    <Plus className="h-4 w-4 mr-1" />
+                                    Kelola Kategori
+                                </Button>
                             </div>
+                            {loadingCategories ? (
+                                <div className="mt-2 text-sm text-muted-foreground">
+                                    Memuat kategori...
+                                </div>
+                            ) : availableCategories.length === 0 ? (
+                                <div className="mt-2 text-sm text-muted-foreground">
+                                    Belum ada kategori. <Button
+                                        type="button"
+                                        variant="link"
+                                        size="sm"
+                                        onClick={() => setIsCategoryModalOpen(true)}
+                                        className="p-0 h-auto"
+                                    >
+                                        <span className="text-blue-700">
+                                            Tambah kategori sekarang
+                                        </span>
+                                        
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                    {availableCategories.map((category) => (
+                                        <label
+                                            key={category.category_id}
+                                            className="flex items-center space-x-2 cursor-pointer"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                value={category.category_id.toString()}
+                                                checked={formData.kategori.includes(
+                                                    category.category_id.toString()
+                                                )}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    setFormData((prev) => {
+                                                        if (e.target.checked) {
+                                                            return {
+                                                                ...prev,
+                                                                kategori: [
+                                                                    ...prev.kategori,
+                                                                    value,
+                                                                ],
+                                                            };
+                                                        } else {
+                                                            return {
+                                                                ...prev,
+                                                                kategori:
+                                                                    prev.kategori.filter(
+                                                                        (k) =>
+                                                                            k !==
+                                                                            value
+                                                                    ),
+                                                            };
+                                                        }
+                                                    });
+                                                }}
+                                                className="rounded border-border text-primary focus:ring-primary"
+                                            />
+                                            <span className="text-foreground">
+                                                {category.name}
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         <div>
@@ -623,6 +676,37 @@ export default function BookUpload() {
                     </div>
                 </form>
             </Card>
+
+            {/* Category Manager Modal */}
+            <CategoryManagerModal
+                isOpen={isCategoryModalOpen}
+                onClose={() => setIsCategoryModalOpen(false)}
+                onCategoriesUpdated={() => {
+                    // Refresh categories after modal closes
+                    const fetchCategories = async () => {
+                        setLoadingCategories(true);
+                        try {
+                            const token = localStorage.getItem("admin_token");
+                            const res = await fetch("/api/admin/categories", {
+                                headers: {
+                                    Authorization: `Bearer ${token}`,
+                                    Accept: "application/json",
+                                },
+                            });
+
+                            if (res.ok) {
+                                const data = await res.json();
+                                setAvailableCategories(data);
+                            }
+                        } catch (error) {
+                            console.error("Failed to fetch categories:", error);
+                        } finally {
+                            setLoadingCategories(false);
+                        }
+                    };
+                    fetchCategories();
+                }}
+            />
         </Sidebar>
     );
 }

@@ -98,7 +98,7 @@ export default function DaftarBukuAll() {
         return (
             <div className="py-4 md:py-6 px-3 sm:px-4">
                 <div className="max-w-6xl mx-auto">
-                    <h1 className="select-none text-center text-lg sm:text-xl md:text-2xl mb-4 md:mb-6 text-gray-200" style={{ fontFamily: "Rubik Mono One" }}>
+                    <h1 className="select-none text-center text-lg sm:text-xl md:text-2xl mb-4 md:mb-6 text-black" style={{ fontFamily: "Rubik Mono One" }}>
                         DAFTAR BUKU
                     </h1>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">

@@ -20,7 +20,6 @@ const Toast = Swal.mixin({
     }
 });
 
-
 const COLORS = {
     primary: '#171717',
     yellow: '#FFD700',
@@ -42,12 +41,21 @@ export default function Dashboard() {
     const [statusData, setStatusData] = useState([]);
     const [recentOrders, setRecentOrders] = useState([]);
     const [chartLoading, setChartLoading] = useState(true);
+    const [ordersToday, setOrdersToday] = useState(0); // State untuk pesanan hari ini
+    const [ordersTodayLoading, setOrdersTodayLoading] = useState(true);
 
     useEffect(() => {
         fetchTotalPendapatan();
         fetchChartData();
         fetchRecentOrders();
+        fetchOrdersToday(); // Panggil saat komponen mount
     }, [timeRangeFilter]);
+
+    // Auto-refresh setiap 30 detik untuk pesanan hari ini
+    useEffect(() => {
+        const interval = setInterval(fetchOrdersToday, 30000);
+        return () => clearInterval(interval);
+    }, []);
 
     const fetchTotalPendapatan = async () => {
         setLoading(true);
@@ -117,27 +125,62 @@ export default function Dashboard() {
     };
 
     const fetchRecentOrders = async () => {
-    try {
-        const token = localStorage.getItem('admin_token');
-        if (!token) return;
+        try {
+            const token = localStorage.getItem('admin_token');
+            if (!token) return;
 
-        const res = await fetch('/api/admin/orders?status=pending', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+            const res = await fetch('/api/admin/orders?status=pending', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
 
-        if (res.ok) {
-            const data = await res.json();
-            
-            const activePendingOrders = (data.data || []).filter(order => 
-                order.status_transaksi !== 'transaksi-kadaluarsa' &&
-                ['transaksi-diproses', 'transaksi-sukses'].includes(order.status_transaksi)
-            );
-            setRecentOrders(activePendingOrders.slice(0, 5)); 
+            if (res.ok) {
+                const data = await res.json();
+                
+                const activePendingOrders = (data.data || []).filter(order => 
+                    order.status_transaksi !== 'transaksi-kadaluarsa' &&
+                    ['transaksi-diproses', 'transaksi-sukses'].includes(order.status_transaksi)
+                );
+                setRecentOrders(activePendingOrders.slice(0, 5)); 
+            }
+        } catch (error) {
+            console.error("Fetch recent orders error:", error);
         }
-    } catch (error) {
-        console.error("Fetch recent orders error:", error);
-    }
-};
+    };
+
+    // ====== FUNGSI BARU: Fetch jumlah pesanan hari ini ======
+    const fetchOrdersToday = async () => {
+        setOrdersTodayLoading(true);
+        try {
+            const token = localStorage.getItem('admin_token');
+            if (!token) {
+                Toast.fire({ icon: "error", title: "Admin belum login." });
+                setOrdersTodayLoading(false);
+                return;
+            }
+
+            const res = await fetch('/api/admin/orders/count-today', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success) {
+                    setOrdersToday(data.count || 0);
+                } else {
+                    setOrdersToday(0);
+                }
+            } else {
+                const error = await res.json().catch(() => ({ message: "Gagal memuat data pesanan hari ini." }));
+                console.error("Orders today API error:", error);
+                setOrdersToday(0);
+            }
+        } catch (error) {
+            console.error("Fetch orders today error:", error);
+            setOrdersToday(0);
+        } finally {
+            setOrdersTodayLoading(false);
+        }
+    };
 
     const formatRupiah = (angka) => {
         return new Intl.NumberFormat('id-ID', {
@@ -263,13 +306,15 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    {/* Pesanan Hari Ini */}
+                    {/* Pesanan Hari Ini - DIPERBAIKI */}
                     <div className="bg-linear-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-blue-100 mb-1">Pesanan Hari Ini</p>
-                                <p className="text-3xl font-bold">0</p>
-                                <p className="text-xs text-blue-100 mt-1">Transaksi baru</p>
+                                <p className="text-3xl font-bold">
+                                    {ordersTodayLoading ? '...' : ordersToday.toLocaleString('id-ID')}
+                                </p>
+                                <p className="text-xs text-blue-100 mt-1">Total transaksi hari ini</p>
                             </div>
                             <div className="bg-white/20 p-3 rounded-full">
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -409,7 +454,7 @@ export default function Dashboard() {
                 {/* Recent Orders */}
                 <div className="bg-white rounded-xl shadow p-6">
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-lg font-semibold text-gray-700">Pesanan Terbaru</h2>
+                        <h2 className="text-lg font-semibold text-gray-700">Pesanan Pending</h2>
                         <a href="/admin/pesanan" className="text-sm text-yellow-600 hover:text-yellow-700 font-medium">
                             Lihat Semua →
                         </a>

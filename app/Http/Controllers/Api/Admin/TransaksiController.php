@@ -320,4 +320,24 @@ class TransaksiController extends Controller
             }
         }
     }
+
+    public function countToday()
+    {
+        try {
+            $count = Transaksi::whereDate('created_at', today())->count();
+            
+            Log::info('Orders Today Count', ['count' => $count]);
+            
+            return response()->json([
+                'success' => true,
+                'count' => $count
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Count Today Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghitung pesanan hari ini.'
+            ], 500);
+        }
+    }
 }

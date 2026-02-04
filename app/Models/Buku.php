@@ -50,4 +50,13 @@ class Buku extends Model
         $avg = $this->reviews()->avg('rating');
         return $avg ? round($avg, 1) : 0;
     }
+    public function categories()
+{
+    return $this->belongsToMany(
+        Category::class,
+        'book_categories',
+        'buku_id',
+        'category_id'
+    )->withTimestamps();
+}
 }

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,9 +10,9 @@ import Loading from "../ui/Loading";
 import { useNavigate } from "react-router-dom";
 
 export default function BookEditForm({ initialBook, onSuccess }) {
-    const initialKategori = initialBook.kategori
-        ? initialBook.kategori.split(",").map(k => k.trim())
-        : [];
+    const initialKategori = Array.isArray(initialBook.kategori)
+        ? initialBook.kategori
+        : (initialBook.kategori ? initialBook.kategori.split(",").map(k => k.trim()) : []);
 
     const [formData, setFormData] = useState({
         judul: initialBook.judul,
@@ -20,7 +20,7 @@ export default function BookEditForm({ initialBook, onSuccess }) {
         penerbit: initialBook.penerbit,
         stok: initialBook.stok.toString(),
         kondisi: initialBook.kondisi,
-        kategori: initialKategori,
+        kategori: initialKategori, 
         foto: null,
         deskripsi: initialBook.deskripsi,
         harga: initialBook.harga.toString(),
@@ -33,7 +33,35 @@ export default function BookEditForm({ initialBook, onSuccess }) {
     const [preview, setPreview] = useState(initialBook.foto);
     const [isLoading, setIsLoading] = useState(false);
     const [showLoadingOverlay, setShowLoadingOverlay] = useState(false);
+    const [availableCategories, setAvailableCategories] = useState([]);
+    const [loadingCategories, setLoadingCategories] = useState(false);
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const fetchCategories = async () => {
+            setLoadingCategories(true);
+            try {
+                const token = localStorage.getItem("admin_token");
+                const res = await fetch("/api/admin/categories", {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        Accept: "application/json",
+                    },
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    setAvailableCategories(data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch categories:", error);
+            } finally {
+                setLoadingCategories(false);
+            }
+        };
+
+        fetchCategories();
+    }, []);
 
     const showToast = (icon, title) => {
         Swal.fire({
@@ -241,13 +269,17 @@ export default function BookEditForm({ initialBook, onSuccess }) {
                 Swal.close();
             }
 
+            const categoryIds = availableCategories
+                .filter(cat => formData.kategori.includes(cat.name))
+                .map(cat => cat.category_id);
+
             const payload = {
                 judul: formData.judul,
                 penulis: formData.penulis,
                 penerbit: formData.penerbit,
                 stok: parseInt(formData.stok, 10),
                 kondisi: formData.kondisi,
-                kategori: formData.kategori.join(","),
+                kategori: categoryIds,
                 foto: fotoUrl,
                 deskripsi: formData.deskripsi,
                 harga: parseInt(formData.harga, 10),
@@ -371,50 +403,50 @@ export default function BookEditForm({ initialBook, onSuccess }) {
                                     (Pilih satu atau lebih)
                                 </span>
                             </Label>
-                            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                                {[
-                                    { value: "fiksi", label: "Fiksi" },
-                                    { value: "non_fiksi", label: "Non-Fiksi" },
-                                    { value: "seni_kreatif", label: "Seni & Kreatif" },
-                                    { value: "gaya_hidup", label: "Gaya Hidup" },
-                                    { value: "pendidikan", label: "Pendidikan" },
-                                    { value: "buku_anak", label: "Buku Anak" },
-                                    { value: "komik", label: "Komik" },
-                                    { value: "novel", label: "Novel" },
-                                    { value: "majalah", label: "Majalah" },
-                                ].map((item) => (
-                                    <label
-                                        key={item.value}
-                                        className="flex items-center space-x-2 cursor-pointer"
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            value={item.value}
-                                            checked={formData.kategori.includes(item.value)}
-                                            onChange={(e) => {
-                                                const value = e.target.value;
-                                                setFormData((prev) => {
-                                                    if (e.target.checked) {
-                                                        return {
-                                                            ...prev,
-                                                            kategori: [...prev.kategori, value],
-                                                        };
-                                                    } else {
-                                                        return {
-                                                            ...prev,
-                                                            kategori: prev.kategori.filter(
-                                                                (k) => k !== value
-                                                            ),
-                                                        };
-                                                    }
-                                                });
-                                            }}
-                                            className="rounded border-border text-primary focus:ring-primary"
-                                        />
-                                        <span className="text-foreground">{item.label}</span>
-                                    </label>
-                                ))}
-                            </div>
+                            {loadingCategories ? (
+                                <div className="mt-2 text-sm text-muted-foreground">
+                                    Memuat kategori...
+                                </div>
+                            ) : availableCategories.length === 0 ? (
+                                <div className="mt-2 text-sm text-muted-foreground">
+                                    Belum ada kategori. Silakan tambahkan kategori terlebih dahulu.
+                                </div>
+                            ) : (
+                                <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                    {availableCategories.map((category) => (
+                                        <label
+                                            key={category.category_id}
+                                            className="flex items-center space-x-2 cursor-pointer"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                value={category.name}
+                                                checked={formData.kategori.includes(category.name)}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    setFormData((prev) => {
+                                                        if (e.target.checked) {
+                                                            return {
+                                                                ...prev,
+                                                                kategori: [...prev.kategori, value],
+                                                            };
+                                                        } else {
+                                                            return {
+                                                                ...prev,
+                                                                kategori: prev.kategori.filter(
+                                                                    (k) => k !== value
+                                                                ),
+                                                            };
+                                                        }
+                                                    });
+                                                }}
+                                                className="rounded border-border text-primary focus:ring-primary"
+                                            />
+                                            <span className="text-foreground">{category.name}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         <div>

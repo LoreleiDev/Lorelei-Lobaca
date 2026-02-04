@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\Admin\PromoController;
 use App\Http\Controllers\Api\PromoPublicController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\OrderHistoryController;
+use App\Http\Controllers\Api\Admin\CategoryController;
 use App\Http\Controllers\Api\Admin\DashboardController;
 use App\Http\Controllers\Api\TransactionStatusController;
 
@@ -131,6 +132,7 @@ Route::middleware(['api', 'auth:sanctum,admin', 'admin'])->prefix('admin')->grou
     Route::post('/logout', [\App\Http\Controllers\Api\Admin\AuthController::class, 'logout']);
     Route::delete('/books/bulk', [BookController::class, 'bulkDestroy']);
     Route::apiResource('books', BookController::class);
+    Route::apiResource('categories', CategoryController::class);
     Route::post('/books/cleanup-image', [BookController::class, 'cleanupImage']);
     Route::apiResource('promos', PromoController::class);
     Route::post('/promos/cleanup-image', [PromoController::class, 'cleanupImage']);
@@ -139,6 +141,7 @@ Route::middleware(['api', 'auth:sanctum,admin', 'admin'])->prefix('admin')->grou
     Route::post('/ulasan/{reviewId}/to-testimonial', [App\Http\Controllers\Api\Admin\ReviewController::class, 'convertToTestimonial']);
     Route::delete('/ulasan/{reviewId}/remove-testimonial', [App\Http\Controllers\Api\Admin\ReviewController::class, 'removeAsTestimonial']);
     Route::get('/orders', [App\Http\Controllers\Api\Admin\TransaksiController::class, 'index']);
+    Route::get('/orders/count-today', [App\Http\Controllers\Api\Admin\TransaksiController::class, 'countToday']);
     Route::post('/orders/{id}/approve', [App\Http\Controllers\Api\Admin\TransaksiController::class, 'approve']);
     Route::post('/orders/{id}/reject', [App\Http\Controllers\Api\Admin\TransaksiController::class, 'rejectAndRefund']);
     Route::post('/orders/{id}/update-shipping', [OrderController::class, 'updateShipping']);

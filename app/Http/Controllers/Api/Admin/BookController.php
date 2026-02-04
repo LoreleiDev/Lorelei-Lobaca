@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Models\Buku;
 use App\Models\Promo;
+use App\Models\Category;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Validation\Rule;
@@ -17,7 +18,7 @@ class BookController extends Controller
     {
         $now = Carbon::now('Asia/Jakarta');
 
-        $books = Buku::with('admin')->get()->map(function ($book) use ($now) {
+        $books = Buku::with(['admin', 'categories'])->get()->map(function ($book) use ($now) {
             $promoInfo = null;
 
             if ($book->harga === null || $book->harga <= 0) {
@@ -54,8 +55,8 @@ class BookController extends Controller
 
                         $promoInfo = [
                             'nama_promo' => $activePromo->name,
-                            'diskon_persen' => (int)$discountPercent,
-                            'harga_setelah_diskon' => (int)$hargaDiskon,
+                            'diskon_persen' => (int) $discountPercent,
+                            'harga_setelah_diskon' => (int) $hargaDiskon,
                         ];
                     }
                 }
@@ -69,6 +70,8 @@ class BookController extends Controller
 
     private function formatBookResponse($book, $promoInfo)
     {
+        $kategoriNames = $book->categories->pluck('name')->toArray();
+
         return [
             'buku_id' => $book->buku_id,
             'judul' => $book->judul,
@@ -78,8 +81,8 @@ class BookController extends Controller
             'kondisi' => $book->kondisi,
             'foto' => $book->foto,
             'deskripsi' => $book->deskripsi,
-            'kategori' => $book->kategori,
-            'harga' => (int)$book->harga,
+            'kategori' => $kategoriNames,
+            'harga' => (int) $book->harga,
             'berat' => $book->berat,
             'isbn' => $book->isbn,
             'tahun' => $book->tahun,
@@ -99,7 +102,8 @@ class BookController extends Controller
             'stok' => 'required|integer|min:0',
             'kondisi' => ['required', Rule::in(['baru', 'baik', 'cukup', 'rusak', 'minus'])],
             'deskripsi' => 'nullable|string',
-            'kategori' => 'required|string',
+            'kategori' => 'required|array',
+            'kategori.*' => 'exists:categories,category_id',
             'harga' => 'required|numeric|min:1000',
             'berat' => 'nullable|numeric|min:1',
             'isbn' => 'nullable|string|max:20',
@@ -118,15 +122,26 @@ class BookController extends Controller
             }
         }
 
+        // Pisahkan data kategori dari validated data
+        $kategoriIds = $validated['kategori'];
+        unset($validated['kategori']);
+
+        // Buat buku
         $buku = Buku::create($validated);
 
-        return response()->json($buku, 201);
+        // Attach kategori ke buku
+        $buku->categories()->attach($kategoriIds);
+
+        // Load relasi categories untuk response
+        $buku->load('categories');
+
+        return response()->json($this->formatBookResponse($buku, null), 201);
     }
 
     public function show($id)
     {
-        $buku = Buku::with('admin')->findOrFail($id);
-        return response()->json($buku);
+        $buku = Buku::with(['admin', 'categories'])->findOrFail($id);
+        return response()->json($this->formatBookResponse($buku, null));
     }
 
     public function update(Request $request, $id)
@@ -140,7 +155,8 @@ class BookController extends Controller
             'stok' => 'sometimes|required|integer|min:0',
             'kondisi' => ['sometimes', 'required', Rule::in(['baru', 'baik', 'cukup', 'rusak', 'minus'])],
             'deskripsi' => 'nullable|string',
-            'kategori' => 'required|string',
+            'kategori' => 'required|array',
+            'kategori.*' => 'exists:categories,category_id',
             'harga' => 'sometimes|required|numeric|min:1000',
             'berat' => 'nullable|numeric|min:1',
             'isbn' => 'nullable|string|max:20',
@@ -150,7 +166,7 @@ class BookController extends Controller
         ]);
 
         if (isset($validated['foto']) && !empty($validated['foto'])) {
-            $cloudName = 'dvwp7mgic';
+            $cloudName = env('CLOUDINARY_CLOUD_NAME');
             if (!str_starts_with($validated['foto'], "https://res.cloudinary.com/{$cloudName}/")) {
                 return response()->json([
                     'message' => 'Foto harus berasal dari Cloudinary yang sah.',
@@ -159,9 +175,20 @@ class BookController extends Controller
             }
         }
 
+        // Pisahkan data kategori
+        $kategoriIds = $validated['kategori'];
+        unset($validated['kategori']);
+
+        // Update buku
         $buku->update($validated);
 
-        return response()->json($buku);
+        // Sync kategori (akan menghapus kategori lama dan menambah yang baru)
+        $buku->categories()->sync($kategoriIds);
+
+        // Load relasi categories untuk response
+        $buku->load('categories');
+
+        return response()->json($this->formatBookResponse($buku, null));
     }
 
     public function bulkDestroy(Request $request)
@@ -178,8 +205,15 @@ class BookController extends Controller
             ->filter()
             ->toArray();
 
+        // Hapus relasi di pivot table terlebih dahulu
+        Buku::whereIn('buku_id', $ids)->each(function ($buku) {
+            $buku->categories()->detach();
+        });
+
+        // Hapus buku
         Buku::destroy($ids);
 
+        // Hapus foto dari Cloudinary
         foreach ($fotoUrls as $url) {
             if (str_starts_with($url, 'https://res.cloudinary.com/')) {
                 $this->deleteFromCloudinaryByUrl($url);
@@ -195,6 +229,16 @@ class BookController extends Controller
     public function destroy($id)
     {
         $buku = Buku::findOrFail($id);
+
+        // Hapus foto dari Cloudinary jika ada
+        if ($buku->foto && str_starts_with($buku->foto, 'https://res.cloudinary.com/')) {
+            $this->deleteFromCloudinaryByUrl($buku->foto);
+        }
+
+        // Hapus relasi kategori
+        $buku->categories()->detach();
+
+        // Hapus buku
         $buku->delete();
 
         return response()->json(null, 204);
@@ -240,6 +284,7 @@ class BookController extends Controller
 
         return false;
     }
+
     public function cleanupImage(Request $request)
     {
         $request->validate([
