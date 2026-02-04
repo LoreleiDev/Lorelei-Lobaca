@@ -46,6 +46,7 @@ Route::get('/promos/featured', [PromoPublicController::class, 'featured']);
 Route::get('/promos/{id}', [PromoPublicController::class, 'show']);
 Route::get('/search/books', [BookPublicController::class, 'search']);
 Route::get('/book/{id}', [BookPublicController::class, 'showById']);
+
 Route::get('/books/{bookId}/reviews', [ReviewController::class, 'index']);
 Route::get('/testimonials/public', [ReviewController::class, 'getTestimonialsForPublic']);
 
@@ -57,32 +58,38 @@ Route::middleware('auth:api')->prefix('email')->group(function () {
     Route::post('/verify-new', [EmailController::class, 'verifyNewEmailCode']);
 });
 
-// --- Routes Public ---
+// --- Routes Protected (User Login) ---
 Route::middleware('auth:sanctum')->group(function () {
     // --- Profil ---
     Route::get('/profile', [ProfileController::class, 'show']);
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar']);
     Route::put('/profile', [ProfileController::class, 'updateProfile']);
+    
     // --- Cart ---
     Route::apiResource('/cart', CartController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::get('/cart/count', [CartController::class, 'getCartCount']);
+    
     // --- Wishlist ---
     Route::get('/wishlist', [WishlistController::class, 'index']);
     Route::post('/wishlist', [WishlistController::class, 'store']);
     Route::delete('/wishlist/{buku_id}', [WishlistController::class, 'destroy']);
+    
     // --- Reviews ---
     Route::post('/reviews', [ReviewController::class, 'store']);
     Route::put('/reviews/{id}', [ReviewController::class, 'update']);
-    Route::get('/books/{bookId}/reviews', [ReviewController::class, 'index']);
+    
     // --- Checkout ---
     Route::post('/checkout/process-payment', [CheckoutController::class, 'processPayment']);
-    // --- Transaksi ---
+    
+    // --- Rajaongkir ---
     Route::get('/rajaongkir/provinces', [RajaongkirController::class, 'getProvinces']);
     Route::get('/rajaongkir/cities/{provinceId}', [RajaongkirController::class, 'getCities']);
     Route::get('/rajaongkir/districts/{cityId}', [RajaongkirController::class, 'getDistricts']);
     Route::get('/rajaongkir/sub-districts/{districtId}', [RajaongkirController::class, 'getSubDistricts']);
+    
     // --- Status Transaksi ---
     Route::get('/transaction/{orderId}/status', [TransactionStatusController::class, 'show']);
+    
     // --- Notifikasi ---
     Route::prefix('notifications')->group(function () {
         Route::get('/', [NotificationController::class, 'index']);
@@ -92,6 +99,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/clear-read', [NotificationController::class, 'destroyAllRead']);
     });
 });
+
 // --- Order History Routes ---
 Route::middleware('auth:sanctum')->prefix('order-history')->group(function () {
     Route::get('/', [OrderHistoryController::class, 'getUserTransactions']);
@@ -101,17 +109,16 @@ Route::middleware('auth:sanctum')->prefix('order-history')->group(function () {
     Route::post('/{transaksiId}/update-status', [OrderHistoryController::class, 'updateStatus']);
 });
 
-// --- Order History ---
+// --- Order History (duplikat, bisa dihapus salah satu) ---
 Route::middleware('auth:sanctum')->prefix('order-history')->group(function () {
     Route::get('/', [OrderHistoryController::class, 'getUserTransactions']);
     Route::get('/{transaksiId}', [OrderHistoryController::class, 'getTransactionDetails']);
     Route::get('/filter', [OrderHistoryController::class, 'filterTransactionsByStatus']);
 });
 
-
 Route::post('/checkout/notification', [CheckoutController::class, 'receiveNotification']);
 
-// --- Rajaongkir Routes ---
+// --- Rajaongkir Routes (PUBLIC) ---
 Route::post('/rajaongkir/calculate-shipping', [RajaongkirController::class, 'calculateShipping']);
 
 // --- Routes Admin ---

@@ -10,8 +10,15 @@ use Illuminate\Support\Facades\Auth;
 
 class ReviewController extends Controller
 {
+    /**
+     * Store a new review or update existing one
+     */
     public function store(Request $request): JsonResponse
     {
+        if (!Auth::check()) {
+            return response()->json(['message' => 'Anda harus login untuk memberikan ulasan'], 401);
+        }
+        
         $request->validate([
             'book_id' => 'required|exists:buku,buku_id',
             'rating' => 'required|integer|min:1|max:5',
@@ -32,8 +39,15 @@ class ReviewController extends Controller
         return response()->json(['message' => 'Ulasan berhasil disimpan', 'review' => $review], 201);
     }
 
+    /**
+     * Update an existing review
+     */
     public function update(Request $request, $id): JsonResponse
     {
+        if (!Auth::check()) {
+            return response()->json(['message' => 'Anda harus login untuk mengedit ulasan'], 401);
+        }
+        
         $request->validate([
             'rating' => 'required|integer|min:1|max:5',
             'comment' => 'required|string|max:1000',
@@ -57,18 +71,28 @@ class ReviewController extends Controller
         return response()->json(['message' => 'Ulasan berhasil diperbarui', 'review' => $review], 200);
     }
 
+    /**
+     * Get all reviews for a book - PUBLIC (tanpa auth)
+     */
     public function index($bookId): JsonResponse
     {
-        $reviews = Review::with('user:id,first_name,last_name,avatar')->where('book_id', $bookId)->latest()->get();
+        $reviews = Review::with('user:id,first_name,last_name,avatar')
+            ->where('book_id', $bookId)
+            ->latest()
+            ->get();
 
+        // Tandai review mana yang milik user yang sedang login (jika ada)
         $reviews = $reviews->map(function ($review) {
-            $review->is_user_review = $review->user_id === auth()->id();
+            $review->is_user_review = Auth::check() && $review->user_id === auth()->id();
             return $review;
         });
 
         return response()->json(['reviews' => $reviews]);
     }
 
+    /**
+     * Get book rating statistics
+     */
     public function getBookRating($bookId): JsonResponse
     {
         $book = Buku::find($bookId);
@@ -93,6 +117,9 @@ class ReviewController extends Controller
         ]);
     }
 
+    /**
+     * Get testimonials for public display
+     */
     public function getTestimonialsForPublic(): JsonResponse
     {
         $testimonials = Review::with('user:id,first_name,last_name,avatar')

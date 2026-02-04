@@ -19,6 +19,7 @@ const Toast = Swal.mixin({
         });
     }
 });
+
 const BOOK_CATEGORIES = [
     { value: "fiksi", label: "Fiksi" },
     { value: "non_fiksi", label: "Non-Fiksi" },
@@ -30,6 +31,7 @@ const BOOK_CATEGORIES = [
     { value: "novel", label: "Novel" },
     { value: "majalah", label: "Majalah" },
 ];
+
 const getCategoryLabels = (categoryString) => {
     if (!categoryString) return [];
     return categoryString
@@ -41,6 +43,7 @@ const getCategoryLabels = (categoryString) => {
             return found ? found.label : cat;
         });
 };
+
 const formatPrice = (price) => {
     return new Intl.NumberFormat('id-ID', {
         style: 'currency',
@@ -48,6 +51,7 @@ const formatPrice = (price) => {
         minimumFractionDigits: 0,
     }).format(price);
 };
+
 export default function BukuDetail() {
     document.title = "Buku - Lobaca";
     const navigate = useNavigate();
@@ -64,9 +68,11 @@ export default function BukuDetail() {
     const location = useLocation();
     const bookId = location.state?.id;
     const bookIdRef = useRef(bookId);
+
     useEffect(() => {
         bookIdRef.current = bookId;
     }, [bookId]);
+
     useEffect(() => {
         const fetchBook = async () => {
             if (!bookId) {
@@ -91,16 +97,22 @@ export default function BukuDetail() {
         };
         fetchBook();
     }, [bookId]);
+
     const fetchReviews = async () => {
         if (!bookId) return;
         setLoadingReviews(true);
         try {
             const token = localStorage.getItem('user_token');
+
+            const headers = {};
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
             const res = await fetch(`/api/books/${bookId}/reviews`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                headers: headers
             });
+
             if (res.ok) {
                 const data = await res.json();
                 setReviews(data.reviews);
@@ -113,6 +125,7 @@ export default function BukuDetail() {
             setLoadingReviews(false);
         }
     };
+
     const goBack = () => {
         if (window.history.state && window.history.state.idx > 0) {
             navigate(-1);
@@ -120,10 +133,13 @@ export default function BukuDetail() {
             navigate('/buku');
         }
     };
+
     const toggleDescription = () => {
         setShowFullDesc(!showFullDesc);
     };
+
     const categoryLabels = book ? getCategoryLabels(book.kategori) : [];
+
     const handleReviewSubmit = async (e) => {
         e.preventDefault();
         if (!isLoggedIn) {
@@ -169,6 +185,7 @@ export default function BukuDetail() {
             Toast.fire({ icon: "error", title: "Kesalahan jaringan." });
         }
     };
+
     const handleAddToCart = async (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -193,6 +210,7 @@ export default function BukuDetail() {
             Toast.fire({ icon: "error", title: "Terjadi kesalahan saat menambahkan ke keranjang." });
         }
     };
+
     const handleAddToWishlist = useCallback(async (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -227,9 +245,11 @@ export default function BukuDetail() {
             });
         }
     }, [authLoading, isLoggedIn, isInWishlist, toggleWishlist, refetchWishlist, requireLogin]);
+
     const isInteractingDisabled = authLoading || isLoading;
     const userReview = reviews.length > 0 ? reviews.find(r => r.is_user_review) : null;
     const otherReviews = reviews.filter(r => !r.is_user_review);
+
     if (authLoading || isLoading) {
         return (
             <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
@@ -237,6 +257,7 @@ export default function BukuDetail() {
             </div>
         );
     }
+
     if (!book) {
         return (
             <div className="min-h-screen bg-gray-50">
@@ -252,7 +273,9 @@ export default function BukuDetail() {
             </div>
         );
     }
+
     const inWishlist = bookId ? isInWishlist(bookId) : false;
+
     return (
         <div className="min-h-screen relative">
             <div className="lg:block hidden">
@@ -312,8 +335,8 @@ export default function BukuDetail() {
                                             <div className="flex items-center">
                                                 <span className="text-sm font-medium text-gray-700 mr-2">Stok:</span>
                                                 <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${book.stok > 0
-                                                        ? 'bg-green-100 text-green-800'
-                                                        : 'bg-red-100 text-red-800'
+                                                    ? 'bg-green-100 text-green-800'
+                                                    : 'bg-red-100 text-red-800'
                                                     }`}>
                                                     {book.stok || 0}
                                                 </span>
@@ -329,8 +352,8 @@ export default function BukuDetail() {
                                                     label: 'Kondisi',
                                                     value: (
                                                         <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${book.kondisi === 'baru'
-                                                                ? 'bg-green-100 text-green-800'
-                                                                : 'bg-yellow-100 text-yellow-800'
+                                                            ? 'bg-green-100 text-green-800'
+                                                            : 'bg-yellow-100 text-yellow-800'
                                                             }`}>
                                                             {book.kondisi || "—"}
                                                         </span>
@@ -378,8 +401,8 @@ export default function BukuDetail() {
                                                 onClick={handleAddToCart}
                                                 disabled={isInteractingDisabled}
                                                 className={`flex-1 py-3 gap-2 font-medium text-sm ${isInteractingDisabled
-                                                        ? "bg-gray-300 text-gray-500 cursor-not-allowed opacity-80"
-                                                        : "bg-yellow-600 text-white hover:bg-yellow-700 cursor-pointer"
+                                                    ? "bg-gray-300 text-gray-500 cursor-not-allowed opacity-80"
+                                                    : "bg-yellow-600 text-white hover:bg-yellow-700 cursor-pointer"
                                                     }`}
                                             >
                                                 <ShoppingCart size={18} />
@@ -389,10 +412,10 @@ export default function BukuDetail() {
                                                 onClick={handleAddToWishlist}
                                                 disabled={isInteractingDisabled}
                                                 className={`flex-1 gap-2 py-3 font-medium text-sm rounded-md ${isInteractingDisabled
-                                                        ? "bg-gray-200 text-gray-400 cursor-not-allowed opacity-80"
-                                                        : inWishlist
-                                                            ? "bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
-                                                            : "bg-white text-blue-700 border border-blue-300 hover:bg-gray-100 cursor-pointer"
+                                                    ? "bg-gray-200 text-gray-400 cursor-not-allowed opacity-80"
+                                                    : inWishlist
+                                                        ? "bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
+                                                        : "bg-white text-blue-700 border border-blue-300 hover:bg-gray-100 cursor-pointer"
                                                     }`}
                                             >
                                                 <Heart size={18} fill={inWishlist ? "white" : "none"} />
@@ -441,8 +464,8 @@ export default function BukuDetail() {
                                                                 onChange={(e) => setComment(e.target.value)}
                                                                 disabled={isInteractingDisabled}
                                                                 className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${isInteractingDisabled
-                                                                        ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-300"
-                                                                        : "border-gray-300 focus:ring-blue-500 bg-white"
+                                                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-300"
+                                                                    : "border-gray-300 focus:ring-blue-500 bg-white"
                                                                     }`}
                                                                 rows="3"
                                                                 placeholder="Edit ulasan Anda..."
@@ -452,8 +475,8 @@ export default function BukuDetail() {
                                                             type="submit"
                                                             disabled={!comment.trim() || isInteractingDisabled}
                                                             className={`cursor-pointer px-6 py-2 rounded-lg font-medium ${!comment.trim() || isInteractingDisabled
-                                                                    ? "bg-gray-300 text-gray-500 cursor-not-allowed opacity-80"
-                                                                    : "bg-blue-600 text-white hover:bg-blue-700"
+                                                                ? "bg-gray-300 text-gray-500 cursor-not-allowed opacity-80"
+                                                                : "bg-blue-600 text-white hover:bg-blue-700"
                                                                 }`}
                                                         >
                                                             Edit Ulasan
@@ -493,8 +516,8 @@ export default function BukuDetail() {
                                                                 onChange={(e) => setComment(e.target.value)}
                                                                 disabled={isInteractingDisabled}
                                                                 className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${isInteractingDisabled
-                                                                        ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-300"
-                                                                        : "border-gray-300 focus:ring-yellow-500 bg-white"
+                                                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-300"
+                                                                    : "border-gray-300 focus:ring-yellow-500 bg-white"
                                                                     }`}
                                                                 rows="3"
                                                                 placeholder="Tulis ulasan Anda..."
@@ -504,8 +527,8 @@ export default function BukuDetail() {
                                                             type="submit"
                                                             disabled={!comment.trim() || isInteractingDisabled}
                                                             className={`cursor-pointer px-6 py-2 rounded-lg font-medium ${!comment.trim() || isInteractingDisabled
-                                                                    ? "bg-gray-300 text-gray-500 cursor-not-allowed opacity-80"
-                                                                    : "bg-yellow-600 text-white hover:bg-yellow-700"
+                                                                ? "bg-gray-300 text-gray-500 cursor-not-allowed opacity-80"
+                                                                : "bg-yellow-600 text-white hover:bg-yellow-700"
                                                                 }`}
                                                         >
                                                             Kirim Ulasan
@@ -622,10 +645,10 @@ export default function BukuDetail() {
                                     onClick={handleAddToWishlist}
                                     disabled={isInteractingDisabled}
                                     className={`cursor-pointer flex-1 gap-1 py-3 text-sm font-medium rounded-xl ${isInteractingDisabled
-                                            ? "bg-gray-200 text-gray-400 cursor-not-allowed opacity-80"
-                                            : inWishlist
-                                                ? "bg-blue-600 text-white hover:bg-blue-700"
-                                                : "bg-white text-blue-700 border border-blue-300 hover:bg-gray-100"
+                                        ? "bg-gray-200 text-gray-400 cursor-not-allowed opacity-80"
+                                        : inWishlist
+                                            ? "bg-blue-600 text-white hover:bg-blue-700"
+                                            : "bg-white text-blue-700 border border-blue-300 hover:bg-gray-100"
                                         }`}
                                 >
                                     <Heart size={18} fill={inWishlist ? "white" : "none"} />
@@ -635,8 +658,8 @@ export default function BukuDetail() {
                                     onClick={handleAddToCart}
                                     disabled={isInteractingDisabled}
                                     className={`cursor-pointer flex-1 gap-1 py-3 text-sm font-medium rounded-xl shadow-md ${isInteractingDisabled
-                                            ? "bg-gray-300 text-gray-500 cursor-not-allowed opacity-80"
-                                            : "bg-yellow-600 text-white hover:bg-yellow-700"
+                                        ? "bg-gray-300 text-gray-500 cursor-not-allowed opacity-80"
+                                        : "bg-yellow-600 text-white hover:bg-yellow-700"
                                         }`}
                                 >
                                     <ShoppingCart size={18} />
