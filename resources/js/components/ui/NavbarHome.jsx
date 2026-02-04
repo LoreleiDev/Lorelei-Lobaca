@@ -67,24 +67,21 @@ const overlayVariants = {
 export default function NavbarHome() {
     const navigate = useNavigate();
     const { profile, isLoggedIn, isLoading, requireLogin, logout } = useAuth();
-    
-    // Handle jika hooks tidak tersedia (provider belum membungkus)
+
     let cartItemCount = 0;
     let wishlistCount = 0;
     let unreadCount = 0;
-    let refetchWishlist = () => {};
-    let refetchNotifications = () => {};
-    
+
     try {
         const cartContext = useCart();
         const wishlistContext = useWishlist();
         const notificationContext = useNotification();
-        
+
         cartItemCount = cartContext?.cartItemCount || 0;
         wishlistCount = wishlistContext?.wishlistCount || 0;
         unreadCount = notificationContext?.unreadCount || 0;
-        refetchWishlist = wishlistContext?.refetch || (() => {});
-        refetchNotifications = notificationContext?.refetch || (() => {});
+        refetchWishlist = wishlistContext?.refetch || (() => { });
+        refetchNotifications = notificationContext?.refetch || (() => { });
     } catch (error) {
         console.warn("Context not available, using fallback values");
     }
@@ -332,7 +329,7 @@ export default function NavbarHome() {
                                     <Search size={16} className="text-white" />
                                 </Button>
                             </div>
-                            
+
                             {/* Dropdown Search Results */}
                             <AnimatePresence>
                                 {showDropdown && (
@@ -373,7 +370,7 @@ export default function NavbarHome() {
                                                 ))}
                                             </div>
                                         </div>
-                                        
+
                                         <div className="max-h-80 overflow-y-auto overflow-x-hidden">
                                             <div className="p-3 border-b border-gray-200 bg-gray-50">
                                                 <div className="flex items-center justify-between">
@@ -383,7 +380,7 @@ export default function NavbarHome() {
                                                     </span>
                                                 </div>
                                             </div>
-                                            
+
                                             {isSearching ? (
                                                 <div className="p-6 flex flex-col items-center justify-center">
                                                     <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin mb-2"></div>
@@ -454,7 +451,7 @@ export default function NavbarHome() {
                                                 </div>
                                             )}
                                         </div>
-                                        
+
                                         {(searchQuery.trim() || selectedCategories.length > 0) && (
                                             <div className="p-3 border-t border-gray-200 bg-gray-50">
                                                 <Button
@@ -565,6 +562,7 @@ export default function NavbarHome() {
                                                     </div>
                                                 </div>
                                             </div>
+                                            {/* dropdown profile */}
                                             <div className="py-2">
                                                 <Button
                                                     onClick={() => {
@@ -885,6 +883,15 @@ export default function NavbarHome() {
                                         </span>
                                     )}
                                 </Button>
+                                <Button
+                                    onClick={() => {
+                                        navigate("/purchase-history");
+                                    }}
+                                    className="w-full justify-start gap-3 p-2 hover:text-blue-500 hover:bg-gray-300 rounded-md transition-colors cursor-pointer text-black relative"
+                                    variant="ghost"
+                                >
+                                    <span className="text-sm">Riwayat Pembelian</span>
+                                </Button>
                                 <div className="p-3 mb-3">
                                     <div className="flex items-center justify-between mb-2">
                                         <h3 className="font-semibold text-sm text-black">Notifikasi</h3>
@@ -898,14 +905,12 @@ export default function NavbarHome() {
                                             <ArrowRight size={14} />
                                         </Button>
                                     </div>
-                                    <div className="space-y-5 mb-3 border-b">
-                                        <div className="text-center py-3 text-gray-500 text-xs">Tidak ada notifikasi pesanan</div>
-                                    </div>
                                     {unreadCount > 0 && (
                                         <div className="text-center py-2 bg-blue-50 rounded-lg text-blue-700 text-sm font-medium">
                                             {unreadCount} notifikasi belum dibaca
                                         </div>
                                     )}
+
                                     <div className="flex gap-2 mt-3">
                                         <Button
                                             onClick={handleLogout}

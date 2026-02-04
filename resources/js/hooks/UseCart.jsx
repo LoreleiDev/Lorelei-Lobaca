@@ -115,6 +115,10 @@ export const CartProvider = ({ children }) => {
         }
     };
 
+    const refetch = useCallback(async () => {
+        await loadCartCount();
+    }, [loadCartCount]);
+
     const initializeCart = useCallback(async () => {
         await loadCartCount();
     }, [loadCartCount]);
@@ -132,6 +136,7 @@ export const CartProvider = ({ children }) => {
                 clearCart,
                 updateCartItemCount,
                 updateCartItemQuantity,
+                refetch,
             }}
         >
             {children}
