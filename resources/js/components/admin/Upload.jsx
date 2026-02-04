@@ -391,7 +391,6 @@ export default function BookUpload() {
                             />
                         </div>
 
-                        {/* --- MULTI-KATEGORI (CHECKBOX) --- */}
                         <div className="md:col-span-2">
                             <Label className="text-sm font-medium">
                                 Kategori *
@@ -497,7 +496,7 @@ export default function BookUpload() {
                                 name="isbn"
                                 value={formData.isbn}
                                 onChange={handleInputChange}
-                                placeholder="978-0-123456-78-9"
+                                placeholder="978-012-3456-78-9"
                                 className="mt-2"
                             />
                         </div>
