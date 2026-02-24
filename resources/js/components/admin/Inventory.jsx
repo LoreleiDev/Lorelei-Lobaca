@@ -46,9 +46,7 @@ const TruncatedText = ({ text, maxLength = 150 }) => {
                     onClick={() => setIsExpanded(!isExpanded)}
                     className="text-primary hover:text-primary/80 text-xs font-medium mt-1 focus:outline-none transition-colors"
                 >
-                    {isExpanded
-                        ? "Tampilkan lebih sedikit"
-                        : "Tampilkan lebih banyak"}
+                    {isExpanded ? "Tampilkan lebih sedikit" : "Tampilkan lebih banyak"}
                 </button>
             )}
         </div>
@@ -66,15 +64,13 @@ const MobileBookCard = ({
     setMobileMenuOpen,
     lowStockThreshold,
     highStockThreshold,
+    categoryMap,
 }) => {
     const dropdownRef = useRef(null);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (
-                dropdownRef.current &&
-                !dropdownRef.current.contains(event.target)
-            ) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
                 setMobileMenuOpen((prev) => ({
                     ...prev,
                     [book.buku_id]: false,
@@ -102,9 +98,7 @@ const MobileBookCard = ({
             rusak: "bg-red-100 text-red-800 border-red-200",
             minus: "bg-orange-100 text-orange-800 border-orange-200",
         };
-        return (
-            conditions[kondisi] || "bg-gray-100 text-gray-800 border-gray-200"
-        );
+        return conditions[kondisi] || "bg-gray-100 text-gray-800 border-gray-200";
     };
 
     const getStockColor = (stok) => {
@@ -113,42 +107,46 @@ const MobileBookCard = ({
         return "bg-green-100 text-green-800 border-green-200";
     };
 
-    const renderKategori = (kategori) => {
+    const renderKategori = (kategori, categoryMap) => {
         if (!kategori) {
             return <span className="text-muted-foreground">–</span>;
         }
-
         if (Array.isArray(kategori)) {
             if (kategori.length === 0) {
                 return <span className="text-muted-foreground">–</span>;
             }
-            return kategori.map((k, i) => (
-                <Badge
-                    key={i}
-                    variant="secondary"
-                    className="bg-purple-100 text-purple-800 border-purple-200 text-xs mr-1 mb-1"
-                >
-                    {k}
-                </Badge>
-            ));
+            return kategori.map((k, i) => {
+                const label = categoryMap[k] || k;
+                return (
+                    <Badge
+                        key={i}
+                        variant="secondary"
+                        className="bg-purple-100 text-purple-800 border-purple-200 text-xs mr-1 mb-1"
+                    >
+                        {label}
+                    </Badge>
+                );
+            });
         }
-
         if (typeof kategori === 'string') {
             const categories = kategori.split(",").filter(k => k.trim());
             if (categories.length === 0) {
                 return <span className="text-muted-foreground">–</span>;
             }
-            return categories.map((k, i) => (
-                <Badge
-                    key={i}
-                    variant="secondary"
-                    className="bg-purple-100 text-purple-800 border-purple-200 text-xs mr-1 mb-1"
-                >
-                    {k.trim()}
-                </Badge>
-            ));
+            return categories.map((k, i) => {
+                const trimmed = k.trim();
+                const label = categoryMap[trimmed] || trimmed;
+                return (
+                    <Badge
+                        key={i}
+                        variant="secondary"
+                        className="bg-purple-100 text-purple-800 border-purple-200 text-xs mr-1 mb-1"
+                    >
+                        {label}
+                    </Badge>
+                );
+            });
         }
-
         return <span className="text-muted-foreground">–</span>;
     };
 
@@ -237,9 +235,7 @@ const MobileBookCard = ({
                     <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Stok:</span>
                         <Badge
-                            className={`${getStockColor(
-                                book.stok
-                            )} border px-2 py-1 rounded text-xs`}
+                            className={`${getStockColor(book.stok)} border px-2 py-1 rounded text-xs`}
                         >
                             {book.stok}
                         </Badge>
@@ -247,9 +243,7 @@ const MobileBookCard = ({
                     <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Kondisi:</span>
                         <Badge
-                            className={`${getConditionColor(
-                                book.kondisi
-                            )} border px-2 py-1 rounded text-xs`}
+                            className={`${getConditionColor(book.kondisi)} border px-2 py-1 rounded text-xs`}
                         >
                             {book.kondisi}
                         </Badge>
@@ -263,9 +257,7 @@ const MobileBookCard = ({
                                 </div>
                                 <div className="font-semibold text-primary text-sm">
                                     Rp{" "}
-                                    {book.promo_info.harga_setelah_diskon?.toLocaleString(
-                                        "id-ID"
-                                    )}
+                                    {book.promo_info.harga_setelah_diskon?.toLocaleString("id-ID")}
                                     <span className="ml-1 text-xs bg-red-100 text-red-800 px-1 rounded">
                                         -{book.promo_info.diskon_persen}%
                                     </span>
@@ -280,18 +272,13 @@ const MobileBookCard = ({
                     <div>
                         <span className="text-muted-foreground">Kategori:</span>
                         <div className="mt-1 flex flex-wrap gap-1">
-                            {renderKategori(book.kategori)}
+                            {renderKategori(book.category, categoryMap)}
                         </div>
                     </div>
                     <div>
-                        <span className="text-muted-foreground">
-                            Deskripsi:
-                        </span>
+                        <span className="text-muted-foreground">Deskripsi:</span>
                         <div className="mt-1">
-                            <TruncatedText
-                                text={book.deskripsi}
-                                maxLength={100}
-                            />
+                            <TruncatedText text={book.deskripsi} maxLength={100} />
                         </div>
                     </div>
                 </div>
@@ -367,11 +354,10 @@ const Pagination = ({
                             key={index}
                             onClick={() => typeof page === "number" && onPageChange(page)}
                             disabled={page === "..."}
-                            className={`min-w-8 h-8 px-2 rounded-md border transition-colors ${
-                                currentPage === page
+                            className={`min-w-8 h-8 px-2 rounded-md border transition-colors ${currentPage === page
                                     ? "bg-primary text-primary-foreground border-primary"
                                     : "border-border hover:bg-muted"
-                            } ${page === "..." ? "cursor-default hover:bg-transparent" : ""}`}
+                                } ${page === "..." ? "cursor-default hover:bg-transparent" : ""}`}
                         >
                             {page}
                         </button>
@@ -401,7 +387,7 @@ const Pagination = ({
     );
 };
 
-export default function BookInventory({ books = [], onRefresh = () => {} }) {
+export default function BookInventory({ books = [], onRefresh = () => { } }) {
     const [deletingId, setDeletingId] = useState(null);
     const [selectedBook, setSelectedBook] = useState(null);
     const [showDeleteLoading, setShowDeleteLoading] = useState(false);
@@ -415,6 +401,30 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [lowStockThreshold, setLowStockThreshold] = useState(5);
     const [highStockThreshold, setHighStockThreshold] = useState(10);
+
+    const [categories, setCategories] = useState([]);
+    const [categoryMap, setCategoryMap] = useState({});
+
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const res = await fetch('/api/public/categories');
+                if (res.ok) {
+                    const data = await res.json();
+                    setCategories(data);
+                    const map = {};
+                    data.forEach(cat => {
+                        if (cat.slug) map[cat.slug] = cat.label || cat.name;
+                        if (cat.value) map[cat.value] = cat.label || cat.name;
+                    });
+                    setCategoryMap(map);
+                }
+            } catch (err) {
+                console.error('Error fetching categories:', err);
+            }
+        };
+        fetchCategories();
+    }, []);
 
     useEffect(() => {
         const checkScreenSize = () => {
@@ -434,12 +444,17 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
     useEffect(() => {
         const savedLow = localStorage.getItem("lowStockThreshold");
         const savedHigh = localStorage.getItem("highStockThreshold");
-        
         if (savedLow) {
-            setLowStockThreshold(parseInt(savedLow));
+            const parsed = parseInt(savedLow);
+            if (!isNaN(parsed) && parsed >= 1) {
+                setLowStockThreshold(parsed);
+            }
         }
         if (savedHigh) {
-            setHighStockThreshold(parseInt(savedHigh));
+            const parsed = parseInt(savedHigh);
+            if (!isNaN(parsed) && parsed >= 1) {
+                setHighStockThreshold(parsed);
+            }
         }
     }, []);
 
@@ -458,7 +473,6 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                 book.judul.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 book.penulis.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 book.penerbit.toLowerCase().includes(searchTerm.toLowerCase());
-            
             let matchesStatus = true;
             if (statusFilter === "high") {
                 matchesStatus = book.stok >= highStockThreshold;
@@ -467,7 +481,6 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
             } else if (statusFilter === "out") {
                 matchesStatus = book.stok === 0;
             }
-            
             return matchesSearch && matchesStatus;
         });
     }, [books, searchTerm, statusFilter, lowStockThreshold, highStockThreshold]);
@@ -500,18 +513,13 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
 
         const token = localStorage.getItem("admin_token");
         if (!token) {
-            Swal.fire(
-                "Error",
-                "Sesi admin tidak valid. Silakan login ulang.",
-                "error"
-            );
+            Swal.fire("Error", "Sesi admin tidak valid. Silakan login ulang.", "error");
             return;
         }
 
         try {
             setDeletingId(id);
             setShowDeleteLoading(true);
-
             if (fotoUrl && fotoUrl.startsWith("https://res.cloudinary.com/")) {
                 await fetch("/api/admin/books/cleanup-image", {
                     method: "POST",
@@ -522,7 +530,6 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                     body: JSON.stringify({ foto_url: fotoUrl }),
                 });
             }
-
             const res = await fetch(`/api/admin/books/${id}`, {
                 method: "DELETE",
                 headers: {
@@ -530,7 +537,6 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                     Accept: "application/json",
                 },
             });
-
             if (res.ok) {
                 Swal.fire("Berhasil", "Buku berhasil dihapus.", "success");
                 onRefresh();
@@ -539,11 +545,7 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                 }
             } else {
                 const err = await res.json().catch(() => ({}));
-                Swal.fire(
-                    "Error",
-                    err.message || "Gagal menghapus buku.",
-                    "error"
-                );
+                Swal.fire("Error", err.message || "Gagal menghapus buku.", "error");
             }
         } catch (error) {
             console.error("Delete error:", error);
@@ -576,16 +578,12 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
 
         try {
             setShowDeleteLoading(true);
-
             const booksToDelete = books.filter((book) =>
                 selectedIds.has(book.buku_id)
             );
             const fotoUrls = booksToDelete
                 .map((b) => b.foto)
-                .filter(
-                    (url) =>
-                        url && url.startsWith("https://res.cloudinary.com/")
-                );
+                .filter((url) => url && url.startsWith("https://res.cloudinary.com/"));
 
             await Promise.all(
                 fotoUrls.map((url) =>
@@ -617,11 +615,7 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                 setCurrentPage(1);
             } else {
                 const err = await response.json().catch(() => ({}));
-                Swal.fire(
-                    "Error",
-                    err.message || "Gagal menghapus buku.",
-                    "error"
-                );
+                Swal.fire("Error", err.message || "Gagal menghapus buku.", "error");
             }
         } catch (error) {
             console.error("Bulk delete error:", error);
@@ -639,9 +633,7 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
             rusak: "bg-red-100 text-red-800 border-red-200",
             minus: "bg-orange-100 text-orange-800 border-orange-200",
         };
-        return (
-            conditions[kondisi] || "bg-gray-100 text-gray-800 border-gray-200"
-        );
+        return conditions[kondisi] || "bg-gray-100 text-gray-800 border-gray-200";
     };
 
     const getStockColor = (stok) => {
@@ -650,67 +642,76 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
         return "bg-green-100 text-green-800 border-green-200";
     };
 
-    const renderKategori = (kategori) => {
+    const renderKategori = (kategori, categoryMap) => {
         if (!kategori) {
             return <span className="text-muted-foreground">–</span>;
         }
-
         if (Array.isArray(kategori)) {
             if (kategori.length === 0) {
                 return <span className="text-muted-foreground">–</span>;
             }
-            return kategori.map((k, i) => (
-                <Badge
-                    key={i}
-                    variant="secondary"
-                    className="bg-purple-100 text-purple-800 border-purple-200 text-xs mr-1 mb-1"
-                >
-                    {k}
-                </Badge>
-            ));
+            return kategori.map((k, i) => {
+                const label = categoryMap[k] || k;
+                return (
+                    <Badge
+                        key={i}
+                        variant="secondary"
+                        className="bg-purple-100 text-purple-800 border-purple-200 text-xs mr-1 mb-1"
+                    >
+                        {label}
+                    </Badge>
+                );
+            });
         }
-
         if (typeof kategori === 'string') {
             const categories = kategori.split(",").filter(k => k.trim());
             if (categories.length === 0) {
                 return <span className="text-muted-foreground">–</span>;
             }
-            return categories.map((k, i) => (
-                <Badge
-                    key={i}
-                    variant="secondary"
-                    className="bg-purple-100 text-purple-800 border-purple-200 text-xs mr-1 mb-1"
-                >
-                    {k.trim()}
-                </Badge>
-            ));
+            return categories.map((k, i) => {
+                const trimmed = k.trim();
+                const label = categoryMap[trimmed] || trimmed;
+                return (
+                    <Badge
+                        key={i}
+                        variant="secondary"
+                        className="bg-purple-100 text-purple-800 border-purple-200 text-xs mr-1 mb-1"
+                    >
+                        {label}
+                    </Badge>
+                );
+            });
         }
-
         return <span className="text-muted-foreground">–</span>;
     };
 
     const handleSaveSettings = () => {
-        if (lowStockThreshold < 1) {
+        const low = parseInt(lowStockThreshold);
+        const high = parseInt(highStockThreshold);
+
+        if (isNaN(low) || low < 1) {
             Swal.fire({
                 icon: "error",
                 title: "Konfigurasi Tidak Valid",
-                text: "Batas stok rendah minimal 1",
+                text: "Batas stok rendah harus angka minimal 1",
+                background: "#1e293b",
+                color: "#f1f5f9",
+            });
+            return;
+        }
+        if (isNaN(high) || high < 1) {
+            Swal.fire({
+                icon: "error",
+                title: "Konfigurasi Tidak Valid",
+                text: "Batas stok tinggi harus angka minimal 1",
                 background: "#1e293b",
                 color: "#f1f5f9",
             });
             return;
         }
 
-        if (highStockThreshold < 1) {
-            Swal.fire({
-                icon: "error",
-                title: "Konfigurasi Tidak Valid",
-                text: "Batas stok tinggi minimal 1",
-                background: "#1e293b",
-                color: "#f1f5f9",
-            });
-            return;
-        }
+        localStorage.setItem("lowStockThreshold", low.toString());
+        localStorage.setItem("highStockThreshold", high.toString());
 
         Swal.fire({
             icon: "success",
@@ -741,7 +742,6 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                     <Loading />
                 </div>
             )}
-
             <div className="min-h-screen bg-background p-4 sm:p-6">
                 <div className="max-w-7xl mx-auto">
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 md:mb-8 gap-4">
@@ -854,9 +854,7 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                             type="text"
                                             placeholder="Cari buku berdasarkan judul, penulis, atau penerbit..."
                                             value={searchTerm}
-                                            onChange={(e) =>
-                                                setSearchTerm(e.target.value)
-                                            }
+                                            onChange={(e) => setSearchTerm(e.target.value)}
                                             className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white/50 text-sm md:text-base"
                                         />
                                     </div>
@@ -866,20 +864,12 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                         <Filter className="w-4 h-4 text-muted-foreground" />
                                         <select
                                             value={statusFilter}
-                                            onChange={(e) =>
-                                                setStatusFilter(e.target.value)
-                                            }
+                                            onChange={(e) => setStatusFilter(e.target.value)}
                                             className="border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent bg-white/50 w-full sm:w-auto"
                                         >
-                                            <option value="all">
-                                                Semua Status
-                                            </option>
-                                            <option value="high">
-                                                Stok Tinggi (&gt;={highStockThreshold})
-                                            </option>
-                                            <option value="low">
-                                                Stok Rendah (1-{lowStockThreshold})
-                                            </option>
+                                            <option value="all">Semua Status</option>
+                                            <option value="high">Stok Tinggi (&gt;={highStockThreshold})</option>
+                                            <option value="low">Stok Rendah (1-{lowStockThreshold})</option>
                                             <option value="out">Habis</option>
                                         </select>
                                     </div>
@@ -932,6 +922,7 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                         setMobileMenuOpen={setMobileMenuOpen}
                                         lowStockThreshold={lowStockThreshold}
                                         highStockThreshold={highStockThreshold}
+                                        categoryMap={categoryMap}
                                     />
                                 ))
                             )}
@@ -948,29 +939,16 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                                         <input
                                                             type="checkbox"
                                                             checked={
-                                                                selectedIds.size >
-                                                                    0 &&
-                                                                selectedIds.size ===
-                                                                    currentBooks.length
+                                                                selectedIds.size > 0 &&
+                                                                selectedIds.size === currentBooks.length
                                                             }
                                                             onChange={(e) => {
-                                                                if (
-                                                                    e.target.checked
-                                                                ) {
+                                                                if (e.target.checked) {
                                                                     setSelectedIds(
-                                                                        new Set(
-                                                                            currentBooks.map(
-                                                                                (
-                                                                                    b
-                                                                                ) =>
-                                                                                    b.buku_id
-                                                                            )
-                                                                        )
+                                                                        new Set(currentBooks.map((b) => b.buku_id))
                                                                     );
                                                                 } else {
-                                                                    setSelectedIds(
-                                                                        new Set()
-                                                                    );
+                                                                    setSelectedIds(new Set());
                                                                 }
                                                             }}
                                                             className="rounded border-border text-primary focus:ring-primary cursor-pointer w-4 h-4"
@@ -999,12 +977,8 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                             <tbody>
                                                 {currentBooks.length === 0 ? (
                                                     <tr>
-                                                        <td
-                                                            colSpan="7"
-                                                            className="px-6 py-8 text-center text-muted-foreground"
-                                                        >
-                                                            Tidak ada buku yang
-                                                            ditemukan.
+                                                        <td colSpan="7" className="px-6 py-8 text-center text-muted-foreground">
+                                                            Tidak ada buku yang ditemukan.
                                                         </td>
                                                     </tr>
                                                 ) : (
@@ -1016,31 +990,15 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                                             <td className="px-4 md:px-6 py-3 md:py-4 text-center whitespace-nowrap">
                                                                 <input
                                                                     type="checkbox"
-                                                                    checked={selectedIds.has(
-                                                                        book.buku_id
-                                                                    )}
-                                                                    onChange={(
-                                                                        e
-                                                                    ) => {
-                                                                        const newSelected =
-                                                                            new Set(
-                                                                                selectedIds
-                                                                            );
-                                                                        if (
-                                                                            e.target
-                                                                                .checked
-                                                                        ) {
-                                                                            newSelected.add(
-                                                                                book.buku_id
-                                                                            );
+                                                                    checked={selectedIds.has(book.buku_id)}
+                                                                    onChange={(e) => {
+                                                                        const newSelected = new Set(selectedIds);
+                                                                        if (e.target.checked) {
+                                                                            newSelected.add(book.buku_id);
                                                                         } else {
-                                                                            newSelected.delete(
-                                                                                book.buku_id
-                                                                            );
+                                                                            newSelected.delete(book.buku_id);
                                                                         }
-                                                                        setSelectedIds(
-                                                                            newSelected
-                                                                        );
+                                                                        setSelectedIds(newSelected);
                                                                     }}
                                                                     className="rounded border-border text-primary focus:ring-primary cursor-pointer w-4 h-4"
                                                                 />
@@ -1048,35 +1006,21 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                                             <td className="px-4 md:px-6 py-3 md:py-4 whitespace-nowrap">
                                                                 <div className="flex items-center gap-3">
                                                                     <img
-                                                                        src={
-                                                                            book.foto
-                                                                        }
-                                                                        alt={
-                                                                            book.judul
-                                                                        }
-                                                                        width={
-                                                                            60
-                                                                        }
-                                                                        height={
-                                                                            80
-                                                                        }
+                                                                        src={book.foto}
+                                                                        alt={book.judul}
+                                                                        width={60}
+                                                                        height={80}
                                                                         className="rounded object-cover"
                                                                     />
                                                                     <div className="min-w-0">
                                                                         <p className="font-medium text-foreground truncate">
-                                                                            {
-                                                                                book.judul
-                                                                            }
+                                                                            {book.judul}
                                                                         </p>
                                                                         <p className="text-muted-foreground text-sm truncate">
-                                                                            {
-                                                                                book.penulis
-                                                                            }
+                                                                            {book.penulis}
                                                                         </p>
                                                                         <p className="text-muted-foreground text-xs truncate">
-                                                                            {
-                                                                                book.penerbit
-                                                                            }
+                                                                            {book.penerbit}
                                                                         </p>
                                                                     </div>
                                                                 </div>
@@ -1084,139 +1028,80 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                                             <td className="px-4 md:px-6 py-3 md:py-4">
                                                                 <div className="space-y-1">
                                                                     <p className="text-sm text-muted-foreground">
-                                                                        ISBN:{" "}
-                                                                        {book.isbn ||
-                                                                            "–"}
+                                                                        ISBN: {book.isbn || "–"}
                                                                     </p>
                                                                     <p className="text-sm text-muted-foreground">
-                                                                        Tahun:{" "}
-                                                                        {book.tahun}
+                                                                        Tahun: {book.tahun}
                                                                     </p>
                                                                     <p className="text-sm text-muted-foreground">
                                                                         Deskripsi:
                                                                     </p>
                                                                     <div className="max-w-xs">
-                                                                        <TruncatedText
-                                                                            text={
-                                                                                book.deskripsi
-                                                                            }
-                                                                            maxLength={
-                                                                                75
-                                                                            }
-                                                                        />
+                                                                        <TruncatedText text={book.deskripsi} maxLength={75} />
                                                                     </div>
                                                                 </div>
                                                             </td>
                                                             <td className="px-4 md:px-6 py-3 md:py-4 whitespace-nowrap">
                                                                 <div className="space-y-2">
                                                                     <Badge
-                                                                        className={`${getStockColor(
-                                                                            book.stok
-                                                                        )} border px-2 py-1 rounded`}
+                                                                        className={`${getStockColor(book.stok)} border px-2 py-1 rounded`}
                                                                     >
-                                                                        Stok:{" "}
-                                                                        {book.stok}
+                                                                        Stok: {book.stok}
                                                                     </Badge>
                                                                     <Badge
-                                                                        className={`${getConditionColor(
-                                                                            book.kondisi
-                                                                        )} border px-2 py-1 rounded`}
+                                                                        className={`${getConditionColor(book.kondisi)} border px-2 py-1 rounded`}
                                                                     >
-                                                                        {
-                                                                            book.kondisi
-                                                                        }
+                                                                        {book.kondisi}
                                                                     </Badge>
                                                                 </div>
                                                             </td>
                                                             <td className="px-4 md:px-6 py-3 md:py-4">
-                                                                {renderKategori(
-                                                                    book.kategori
-                                                                )}
+                                                                {renderKategori(book.category, categoryMap)}
                                                             </td>
                                                             <td className="px-4 md:px-6 py-3 md:py-4">
                                                                 {book.promo_info ? (
                                                                     <div className="flex flex-col">
                                                                         <span className="line-through text-muted-foreground text-sm">
-                                                                            Rp{" "}
-                                                                            {book.harga?.toLocaleString(
-                                                                                "id-ID"
-                                                                            )}
+                                                                            Rp {book.harga?.toLocaleString("id-ID")}
                                                                         </span>
                                                                         <span className="font-semibold text-primary">
                                                                             Rp{" "}
-                                                                            {book.promo_info.harga_setelah_diskon?.toLocaleString(
-                                                                                "id-ID"
-                                                                            )}
+                                                                            {book.promo_info.harga_setelah_diskon?.toLocaleString("id-ID")}
                                                                             <span className="ml-1 text-xs bg-red-100 text-red-800 px-1 rounded">
-                                                                                -
-                                                                                {
-                                                                                    book
-                                                                                        .promo_info
-                                                                                        .diskon_persen
-                                                                                }
-                                                                                %
+                                                                                -{book.promo_info.diskon_persen}%
                                                                             </span>
                                                                         </span>
                                                                     </div>
                                                                 ) : (
                                                                     <span className="font-semibold text-foreground">
-                                                                        Rp{" "}
-                                                                        {book.harga?.toLocaleString(
-                                                                            "id-ID"
-                                                                        )}
+                                                                        Rp {book.harga?.toLocaleString("id-ID")}
                                                                     </span>
                                                                 )}
                                                             </td>
                                                             <td className="px-4 md:px-6 py-3 md:py-4 whitespace-nowrap">
                                                                 <div className="flex items-center justify-center gap-1">
                                                                     <button
-                                                                        onClick={() =>
-                                                                            setSelectedBook(
-                                                                                book
-                                                                            )
-                                                                        }
+                                                                        onClick={() => setSelectedBook(book)}
                                                                         className="cursor-pointer rounded-lg p-2 hover:bg-blue-100 text-blue-600 transition-all duration-200 hover:scale-110"
                                                                         title="Lihat detail"
                                                                     >
-                                                                        <Eye
-                                                                            size={
-                                                                                16
-                                                                            }
-                                                                        />
+                                                                        <Eye size={16} />
                                                                     </button>
-                                                                    <Link
-                                                                        to={`/admin/inventory/${book.buku_id}`}
-                                                                    >
+                                                                    <Link to={`/admin/inventory/${book.buku_id}`}>
                                                                         <button
                                                                             className="cursor-pointer rounded-lg p-2 hover:bg-green-100 text-green-600 transition-all duration-200 hover:scale-110"
                                                                             title="Edit buku"
                                                                         >
-                                                                            <Edit2
-                                                                                size={
-                                                                                    16
-                                                                                }
-                                                                            />
+                                                                            <Edit2 size={16} />
                                                                         </button>
                                                                     </Link>
                                                                     <button
-                                                                        onClick={() =>
-                                                                            handleDelete(
-                                                                                book.buku_id,
-                                                                                book.foto
-                                                                            )
-                                                                        }
-                                                                        disabled={
-                                                                            deletingId ===
-                                                                            book.buku_id
-                                                                        }
+                                                                        onClick={() => handleDelete(book.buku_id, book.foto)}
+                                                                        disabled={deletingId === book.buku_id}
                                                                         className="cursor-pointer rounded-lg p-2 hover:bg-red-100 text-red-600 transition-all duration-200 hover:scale-110 disabled:opacity-50"
                                                                         title="Hapus buku"
                                                                     >
-                                                                        <Trash2
-                                                                            size={
-                                                                                16
-                                                                            }
-                                                                        />
+                                                                        <Trash2 size={16} />
                                                                     </button>
                                                                 </div>
                                                             </td>
@@ -1228,7 +1113,6 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                     </div>
                                 </div>
                             </Card>
-
                             {filteredBooks.length > 0 && (
                                 <Pagination
                                     currentPage={currentPage}
@@ -1278,14 +1162,11 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                     />
                                 ) : (
                                     <div className="w-full h-48 sm:h-64 bg-muted rounded-lg flex items-center justify-center">
-                                        <span className="text-muted-foreground">
-                                            No Image
-                                        </span>
+                                        <span className="text-muted-foreground">No Image</span>
                                     </div>
                                 )}
                             </div>
                         </div>
-
                         <div className="md:w-3/5 p-4 sm:p-6 md:p-8 border-t md:border-t-0 md:border-l border-border overflow-y-auto">
                             <div className="space-y-4 sm:space-y-6">
                                 <div>
@@ -1327,9 +1208,7 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                         </p>
                                         <p className="text-foreground text-sm sm:text-base">
                                             <Badge
-                                                className={`${getStockColor(
-                                                    selectedBook.stok
-                                                )} border px-2 py-1 rounded text-xs`}
+                                                className={`${getStockColor(selectedBook.stok)} border px-2 py-1 rounded text-xs`}
                                             >
                                                 {selectedBook.stok}
                                             </Badge>
@@ -1341,9 +1220,7 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                         </p>
                                         <p className="text-foreground text-sm sm:text-base">
                                             <Badge
-                                                className={`${getConditionColor(
-                                                    selectedBook.kondisi
-                                                )} border px-2 py-1 rounded text-xs`}
+                                                className={`${getConditionColor(selectedBook.kondisi)} border px-2 py-1 rounded text-xs`}
                                             >
                                                 {selectedBook.kondisi}
                                             </Badge>
@@ -1354,9 +1231,7 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                             Berat
                                         </p>
                                         <p className="text-foreground text-sm sm:text-base">
-                                            {selectedBook.berat
-                                                ? `${selectedBook.berat} gram`
-                                                : "–"}
+                                            {selectedBook.berat ? `${selectedBook.berat} gram` : "–"}
                                         </p>
                                     </div>
                                     <div className="col-span-1 sm:col-span-2">
@@ -1366,33 +1241,19 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                         {selectedBook.promo_info ? (
                                             <div className="flex flex-col">
                                                 <p className="text-muted-foreground line-through text-sm sm:text-base">
-                                                    Rp{" "}
-                                                    {selectedBook.harga?.toLocaleString(
-                                                        "id-ID"
-                                                    )}
+                                                    Rp {selectedBook.harga?.toLocaleString("id-ID")}
                                                 </p>
                                                 <p className="text-foreground font-bold text-base sm:text-lg">
                                                     Rp{" "}
-                                                    {selectedBook.promo_info.harga_setelah_diskon?.toLocaleString(
-                                                        "id-ID"
-                                                    )}
+                                                    {selectedBook.promo_info.harga_setelah_diskon?.toLocaleString("id-ID")}
                                                     <span className="ml-2 text-xs bg-red-100 text-red-800 px-1.5 py-0.5 rounded-full">
-                                                        -
-                                                        {
-                                                            selectedBook
-                                                                .promo_info
-                                                                .diskon_persen
-                                                        }
-                                                        %
+                                                        -{selectedBook.promo_info.diskon_persen}%
                                                     </span>
                                                 </p>
                                             </div>
                                         ) : (
                                             <p className="text-foreground font-bold text-base sm:text-lg">
-                                                Rp{" "}
-                                                {selectedBook.harga?.toLocaleString(
-                                                    "id-ID"
-                                                )}
+                                                Rp {selectedBook.harga?.toLocaleString("id-ID")}
                                             </p>
                                         )}
                                     </div>
@@ -1403,14 +1264,9 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                     </p>
                                     <div className="bg-muted/30 rounded-lg p-3 sm:p-4">
                                         {selectedBook.deskripsi ? (
-                                            <TruncatedText
-                                                text={selectedBook.deskripsi}
-                                                maxLength={200}
-                                            />
+                                            <TruncatedText text={selectedBook.deskripsi} maxLength={200} />
                                         ) : (
-                                            <p className="text-muted-foreground text-sm">
-                                                Tidak ada deskripsi.
-                                            </p>
+                                            <p className="text-muted-foreground text-sm">Tidak ada deskripsi.</p>
                                         )}
                                     </div>
                                 </div>
@@ -1419,7 +1275,7 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                         Kategori
                                     </p>
                                     <div className="flex flex-wrap gap-2">
-                                        {renderKategori(selectedBook.kategori)}
+                                        {renderKategori(selectedBook.category, categoryMap)}
                                     </div>
                                 </div>
                             </div>
@@ -1431,10 +1287,7 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                 >
                                     Tutup
                                 </Button>
-                                <Link
-                                    to={`/admin/inventory/${selectedBook.buku_id}`}
-                                    className="flex-1"
-                                >
+                                <Link to={`/admin/inventory/${selectedBook.buku_id}`} className="flex-1">
                                     <Button className="w-full cursor-pointer text-sm sm:text-base">
                                         Edit Buku
                                     </Button>
@@ -1452,8 +1305,7 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                             <span>Pengaturan Batas Stok</span>
                         </DialogTitle>
                     </DialogHeader>
-
-                    <div className="space-y-4 py-4"> 
+                    <div className="space-y-4 py-4">
                         <div>
                             <Label htmlFor="low-stock" className="text-sm font-medium">
                                 Batas Stok Rendah
@@ -1463,19 +1315,24 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                 type="number"
                                 value={lowStockThreshold}
                                 onChange={(e) => {
-                                    const value = parseInt(e.target.value);
-                                    if (!isNaN(value) && value >= 1) {
-                                        setLowStockThreshold(value);
+                                    const value = e.target.value;
+                                    if (value === "") {
+                                        setLowStockThreshold("");
+                                    } else {
+                                        const num = parseInt(value);
+                                        if (!isNaN(num) && num >= 1) {
+                                            setLowStockThreshold(num);
+                                        }
                                     }
                                 }}
                                 min="1"
                                 className="mt-2"
+                                placeholder="Min: 1"
                             />
                             <p className="text-xs text-muted-foreground mt-1">
-                                Buku dengan stok 1-{lowStockThreshold} akan ditandai sebagai stok rendah
+                                Buku dengan stok 1-{lowStockThreshold || '?'} akan ditandai sebagai stok rendah
                             </p>
                         </div>
-
                         <div>
                             <Label htmlFor="high-stock" className="text-sm font-medium">
                                 Batas Stok Tinggi
@@ -1485,19 +1342,24 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                                 type="number"
                                 value={highStockThreshold}
                                 onChange={(e) => {
-                                    const value = parseInt(e.target.value);
-                                    if (!isNaN(value) && value >= 1) {
-                                        setHighStockThreshold(value);
+                                    const value = e.target.value;
+                                    if (value === "") {
+                                        setHighStockThreshold("");
+                                    } else {
+                                        const num = parseInt(value);
+                                        if (!isNaN(num) && num >= 1) {
+                                            setHighStockThreshold(num);
+                                        }
                                     }
                                 }}
                                 min="1"
                                 className="mt-2"
+                                placeholder="Min: 1"
                             />
                             <p className="text-xs text-muted-foreground mt-1">
-                                Buku dengan stok ≥ {highStockThreshold} akan ditandai sebagai stok tinggi
+                                Buku dengan stok ≥ {highStockThreshold || '?'} akan ditandai sebagai stok tinggi
                             </p>
                         </div>
-
                         <div className="flex gap-2 justify-end pt-4 border-t border-border">
                             <Button
                                 variant="outline"
@@ -1509,19 +1371,15 @@ export default function BookInventory({ books = [], onRefresh = () => {} }) {
                             >
                                 Reset Default
                             </Button>
-                            <Button
-                                onClick={handleSaveSettings}
-                                className="cursor-pointer"
-                            >
+                            <Button onClick={handleSaveSettings} className="cursor-pointer">
                                 Simpan Pengaturan
                             </Button>
                         </div>
-
                         <div className="bg-muted/30 p-3 rounded-lg">
                             <p className="text-sm font-medium mb-2">Keterangan:</p>
                             <ul className="text-xs space-y-1 text-muted-foreground">
-                                <li>• Stok Rendah: 1-{lowStockThreshold} item</li>
-                                <li>• Stok Tinggi: ≥ {highStockThreshold} item</li>
+                                <li>• Stok Rendah: 1-{lowStockThreshold || '?'} item</li>
+                                <li>• Stok Tinggi: ≥ {highStockThreshold || '?'} item</li>
                                 <li>• Habis: 0 item</li>
                                 <li>• Kedua batas dapat diatur secara independen</li>
                                 <li>• Pengaturan ini disimpan di browser Anda</li>

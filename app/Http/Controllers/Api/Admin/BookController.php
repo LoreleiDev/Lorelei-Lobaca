@@ -46,13 +46,10 @@ class BookController extends Controller
 
             if ($activePromo) {
                 $promoBook = $activePromo->books()->where('promo_buku.buku_id', $book->buku_id)->first();
-
                 if ($promoBook && $promoBook->pivot) {
                     $discountPercent = $promoBook->pivot->discount_percent;
-
                     if (is_numeric($discountPercent) && $discountPercent > 0) {
                         $hargaDiskon = $book->harga - ($book->harga * $discountPercent / 100);
-
                         $promoInfo = [
                             'nama_promo' => $activePromo->name,
                             'diskon_persen' => (int) $discountPercent,
@@ -70,8 +67,6 @@ class BookController extends Controller
 
     private function formatBookResponse($book, $promoInfo)
     {
-        $kategoriNames = $book->categories->pluck('name')->toArray();
-
         return [
             'buku_id' => $book->buku_id,
             'judul' => $book->judul,
@@ -81,7 +76,10 @@ class BookController extends Controller
             'kondisi' => $book->kondisi,
             'foto' => $book->foto,
             'deskripsi' => $book->deskripsi,
-            'kategori' => $kategoriNames,
+            
+            'category' => $book->categories->pluck('slug')->filter()->join(','),
+            'category_labels' => $book->categories->pluck('name')->filter()->values(),
+            
             'harga' => (int) $book->harga,
             'berat' => $book->berat,
             'isbn' => $book->isbn,
@@ -122,17 +120,11 @@ class BookController extends Controller
             }
         }
 
-        // Pisahkan data kategori dari validated data
         $kategoriIds = $validated['kategori'];
         unset($validated['kategori']);
 
-        // Buat buku
         $buku = Buku::create($validated);
-
-        // Attach kategori ke buku
         $buku->categories()->attach($kategoriIds);
-
-        // Load relasi categories untuk response
         $buku->load('categories');
 
         return response()->json($this->formatBookResponse($buku, null), 201);
@@ -175,17 +167,11 @@ class BookController extends Controller
             }
         }
 
-        // Pisahkan data kategori
         $kategoriIds = $validated['kategori'];
         unset($validated['kategori']);
 
-        // Update buku
         $buku->update($validated);
-
-        // Sync kategori (akan menghapus kategori lama dan menambah yang baru)
         $buku->categories()->sync($kategoriIds);
-
-        // Load relasi categories untuk response
         $buku->load('categories');
 
         return response()->json($this->formatBookResponse($buku, null));
@@ -199,21 +185,14 @@ class BookController extends Controller
         ]);
 
         $ids = $request->ids;
+        $fotoUrls = Buku::whereIn('buku_id', $ids)->pluck('foto')->filter()->toArray();
 
-        $fotoUrls = Buku::whereIn('buku_id', $ids)
-            ->pluck('foto')
-            ->filter()
-            ->toArray();
-
-        // Hapus relasi di pivot table terlebih dahulu
         Buku::whereIn('buku_id', $ids)->each(function ($buku) {
             $buku->categories()->detach();
         });
 
-        // Hapus buku
         Buku::destroy($ids);
 
-        // Hapus foto dari Cloudinary
         foreach ($fotoUrls as $url) {
             if (str_starts_with($url, 'https://res.cloudinary.com/')) {
                 $this->deleteFromCloudinaryByUrl($url);
@@ -230,15 +209,11 @@ class BookController extends Controller
     {
         $buku = Buku::findOrFail($id);
 
-        // Hapus foto dari Cloudinary jika ada
         if ($buku->foto && str_starts_with($buku->foto, 'https://res.cloudinary.com/')) {
             $this->deleteFromCloudinaryByUrl($buku->foto);
         }
 
-        // Hapus relasi kategori
         $buku->categories()->detach();
-
-        // Hapus buku
         $buku->delete();
 
         return response()->json(null, 204);
@@ -249,8 +224,8 @@ class BookController extends Controller
         try {
             $path = parse_url($url, PHP_URL_PATH);
             $parts = explode('/', $path);
-
             $uploadIndex = array_search('upload', $parts);
+            
             if ($uploadIndex !== false && isset($parts[$uploadIndex + 1])) {
                 $publicId = implode('/', array_slice($parts, $uploadIndex + 2));
                 $publicId = preg_replace('/\.[^.]*$/', '', $publicId);
@@ -259,7 +234,6 @@ class BookController extends Controller
                 $apiKey = env('CLOUDINARY_API_KEY');
                 $apiSecret = env('CLOUDINARY_API_SECRET');
                 $timestamp = time();
-
                 $signature = sha1("public_id={$publicId}&timestamp={$timestamp}{$apiSecret}");
 
                 $response = Http::asForm()->post("https://api.cloudinary.com/v1_1/{$cloudName}/image/destroy", [
@@ -281,18 +255,13 @@ class BookController extends Controller
         } catch (\Exception $e) {
             Log::error('Cloudinary delete failed: ' . $e->getMessage(), ['url' => $url]);
         }
-
         return false;
     }
 
     public function cleanupImage(Request $request)
     {
-        $request->validate([
-            'foto_url' => 'required|url|max:500'
-        ]);
-
+        $request->validate(['foto_url' => 'required|url|max:500']);
         $this->deleteFromCloudinaryByUrl($request->foto_url);
-
         return response()->json(['success' => true]);
     }
 }

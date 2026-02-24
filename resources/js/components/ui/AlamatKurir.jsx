@@ -1,14 +1,20 @@
 import { useState, useEffect } from "react";
-import { ChevronRight, Package, MapPin, Truck, AlertCircle, Loader2, Search } from "lucide-react";
+import { ChevronRight, AlertCircle, Loader2, Search, MapPin, Truck, Package, CheckCircle, Home, Building, Info, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import Swal from "sweetalert2";
+import Loading from "./Loading";
 
 const Toast = Swal.mixin({
   toast: true,
   position: "top-end",
   showConfirmButton: false,
   timer: 3000,
+  timerProgressBar: true,
+  didOpen: (toast) => {
+    toast.onmouseenter = Swal.stopTimer;
+    toast.onmouseleave = Swal.resumeTimer;
+  }
 });
 
 const FIXED_ORIGIN_ID = "5896";
@@ -29,6 +35,7 @@ export default function AlamatKurirPage() {
   const [cartWeight, setCartWeight] = useState(0);
   const [allServices, setAllServices] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingInitial, setLoadingInitial] = useState(true);
   const [error, setError] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
@@ -146,6 +153,8 @@ export default function AlamatKurirPage() {
         }
       } catch (error) {
         Toast.fire({ icon: "error", title: "Kesalahan jaringan saat mengambil berat." });
+      } finally {
+        setLoadingInitial(false);
       }
     };
     fetchCartWeight();
@@ -314,15 +323,14 @@ export default function AlamatKurirPage() {
     const fullAddress = `${selection.subDistrict.name}, ${selection.district.name}, ${selection.city.name}, ${selection.province.name}`;
     const detailRT = detailAlamat.rt ? `RT ${detailAlamat.rt}` : "";
     const detailRW = detailAlamat.rw ? `RW ${detailAlamat.rw}` : "";
-    const detailGang = detailAlamat.gang ? `Gang ${detailAlamat.gang}` : "";
+    const detailGang = detailAlamat.gang ? detailAlamat.gang : "";
     const detailNomor = detailAlamat.nomor_rumah ? `No. ${detailAlamat.nomor_rumah}` : "";
     const detailKeterangan = detailAlamat.keterangan ? `(${detailAlamat.keterangan})` : "";
 
     const alamatLengkap = [
-      fullAddress,
+      [detailNomor, detailGang].filter(Boolean).join(" "),
       [detailRT, detailRW].filter(Boolean).join("/"),
-      detailGang,
-      detailNomor,
+      fullAddress,
       detailKeterangan
     ].filter(Boolean).join(", ");
 
@@ -338,252 +346,304 @@ export default function AlamatKurirPage() {
     }, 1500);
   };
 
+  const formatWeight = (grams) => {
+    if (grams >= 1000) {
+      return `${(grams / 1000).toFixed(2)} kg`;
+    }
+    return `${grams} gram`;
+  };
+
+  if (loadingInitial) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loading />
+      </div>
+    );
+  }
+
   if (step === "address" && provinces.length === 0 && loading) {
     return (
-      <div className="w-full h-screen flex items-center justify-center bg-[#f4d03f]">
-        <div className="text-2xl font-bold text-black">Memuat provinsi...</div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loading />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f4d03f] flex flex-col font-sans overflow-hidden">
-      <div className="px-8 pt-8 pb-6 shrink-0">
-        <div className="bg-[#f4d03f] border-2 border-black rounded-tl-3xl rounded-tr-md px-6 py-3 inline-block shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-          <h1 className="text-2xl font-bold text-black tracking-wide">
-            Atur Alamat & Kurir Pengiriman
-          </h1>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 px-6 py-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Tombol Kembali */}
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors mb-4"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-sm font-medium cursor-pointer">Kembali</span>
+          </button>
+          
+          <div className="flex items-center gap-3">
+            <div className="bg-gray-800 p-2.5 rounded-lg">
+              <Truck className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">Atur Alamat & Pengiriman</h1>
+              <p className="text-gray-600 text-sm mt-1">Pilih lokasi tujuan dan layanan kurir</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <main className="flex-1 relative flex flex-col px-8 overflow-hidden">
-        <div className="flex gap-4 mb-6 z-10">
-          {["address", "results"].map((s, idx) => (
-            <div
-              key={s}
-              className={cn(
-                "h-2 flex-1 skew-x-[-20deg] border-2 border-black transition-all duration-300",
-                step === s ? "bg-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]" : "bg-white/50",
-              )}
-            />
-          ))}
+      <div className="flex-1 max-w-7xl w-full mx-auto px-6 py-8">
+        {/* Progress Steps */}
+        <div className="flex items-center gap-2 mb-8">
+          <div className={cn(
+            "flex items-center gap-2 px-4 py-2 rounded-md transition-colors",
+            step === "address" ? "bg-gray-800 text-white" : "bg-white text-gray-600 border border-gray-300"
+          )}>
+            <MapPin className="w-4 h-4" />
+            <span className="text-sm font-medium">Alamat</span>
+          </div>
+          <ChevronRight className="w-4 h-4 text-gray-400" />
+          <div className={cn(
+            "flex items-center gap-2 px-4 py-2 rounded-md transition-colors",
+            step === "results" ? "bg-gray-800 text-white" : "bg-white text-gray-600 border border-gray-300"
+          )}>
+            <Package className="w-4 h-4" />
+            <span className="text-sm font-medium">Pilih Kurir</span>
+          </div>
         </div>
 
-        <div className="flex-1 flex gap-8 relative overflow-hidden">
-          <div className="flex-1 overflow-y-auto pr-4 pb-20 scrollbar-hide">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Main Content */}
+          <div className="flex-1">
             {step === "address" && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-left-8 duration-500">
-                <div className="bg-white border-4 border-black p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
-                  <h2 className="text-2xl font-black italic uppercase mb-4 text-black underline decoration-4 decoration-[#f4d03f] underline-offset-4">
-                    Target Pengiriman
-                  </h2>
-                  <div className="space-y-6">
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {selection.province && (
-                        <span className="bg-black text-white px-3 py-1 text-xs font-black italic uppercase skew-x-[-10deg] relative group">
-                          {selection.province.name}
-                          <button
-                            onClick={() => {
-                              setSelection({ province: null, city: null, district: null, subDistrict: null });
-                              setCities([]);
-                              setDistricts([]);
-                              setSubDistricts([]);
-                              setDetailAlamat({ rt: "", rw: "", gang: "", nomor_rumah: "", keterangan: "" });
-                            }}
-                            className="ml-1 text-white hover:text-red-500 absolute -top-1 -right-1 bg-black rounded-full w-4 h-4 flex items-center justify-center text-[10px]"
-                          >
-                            ×
-                          </button>
-                        </span>
-                      )}
-                      {selection.city && (
-                        <span className="bg-black text-white px-3 py-1 text-xs font-black italic uppercase skew-x-[-10deg] relative group">
-                          {selection.city.name}
-                          <button
-                            onClick={() => {
-                              setSelection(prev => ({ ...prev, city: null, district: null, subDistrict: null }));
-                              setDistricts([]);
-                              setSubDistricts([]);
-                              setDetailAlamat({ rt: "", rw: "", gang: "", nomor_rumah: "", keterangan: "" });
-                            }}
-                            className="ml-1 text-white hover:text-red-500 absolute -top-1 -right-1 bg-black rounded-full w-4 h-4 flex items-center justify-center text-[10px]"
-                          >
-                            ×
-                          </button>
-                        </span>
-                      )}
-                      {selection.district && (
-                        <span className="bg-black text-white px-3 py-1 text-xs font-black italic uppercase skew-x-[-10deg] relative group">
-                          {selection.district.name}
-                          <button
-                            onClick={() => {
-                              setSelection(prev => ({ ...prev, district: null, subDistrict: null }));
-                              setSubDistricts([]);
-                              setDetailAlamat({ rt: "", rw: "", gang: "", nomor_rumah: "", keterangan: "" });
-                            }}
-                            className="ml-1 text-white hover:text-red-500 absolute -top-1 -right-1 bg-black rounded-full w-4 h-4 flex items-center justify-center text-[10px]"
-                          >
-                            ×
-                          </button>
-                        </span>
-                      )}
-                      {selection.subDistrict && (
-                        <span className="bg-[#f4d03f] text-black px-3 py-1 text-xs font-black italic uppercase skew-x-[-10deg] border-2 border-black relative group">
-                          {selection.subDistrict.name}
-                          <button
-                            onClick={() => {
-                              setSelection(prev => ({ ...prev, subDistrict: null }));
-                              setDetailAlamat({ rt: "", rw: "", gang: "", nomor_rumah: "", keterangan: "" });
-                            }}
-                            className="ml-1 text-black hover:text-red-700 absolute -top-1 -right-1 bg-[#f4d03f] rounded-full w-4 h-4 flex items-center justify-center text-[10px]"
-                          >
-                            ×
-                          </button>
-                        </span>
-                      )}
+              <div className="space-y-6">
+                {/* Address Selection Card */}
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="bg-blue-50 p-2 rounded-md">
+                      <MapPin className="w-5 h-5 text-blue-600" />
                     </div>
+                    <h2 className="text-lg font-semibold text-gray-800">Lokasi Pengiriman</h2>
+                  </div>
 
-                    {!selection.subDistrict && (
-                      <div className="relative group">
-                        <label className="text-xs font-bold uppercase tracking-widest text-black/60 mb-1 block">
-                          Cari {" "}
-                          {!selection.province
-                            ? "Provinsi"
-                            : !selection.city
-                              ? "Kota"
-                              : !selection.district
-                                ? "Kecamatan"
-                                : "Kelurahan"}
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Ketik untuk mencari..."
-                            className="w-full bg-white border-b-4 border-black py-4 pl-10 focus:outline-none font-black text-xl italic placeholder:text-black/20 uppercase"
-                          />
-                          <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-6 h-6 text-black" />
-                          {isSearching && (
-                            <Loader2 className="absolute right-0 top-1/2 -translate-y-1/2 w-6 h-6 animate-spin text-black" />
-                          )}
-                        </div>
-                        <div className="mt-2 space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
-                          {(searchQuery.length > 0 ?
-                            ((!selection.province ? provinces : !selection.city ? cities : !selection.district ? districts : subDistricts)
-                              .filter((item) => item.name.toLowerCase().includes(searchQuery.toLowerCase())))
-                            :
-                            (selection.province && !selection.subDistrict ? (!selection.city ? cities : !selection.district ? districts : subDistricts) : [])
-                          )
-                            .slice(0, 20)
-                            .map((item) => (
-                              <button
-                                key={item.id}
-                                onClick={() => {
-                                  if (!selection.province) handleSelectProvince(item)
-                                  else if (!selection.city) handleSelectCity(item)
-                                  else if (!selection.district) handleSelectDistrict(item)
-                                  else handleSelectSubDistrict(item)
-                                }}
-                                className="w-full text-left bg-white border-2 border-black p-3 hover:bg-black hover:text-white transition-all font-bold italic uppercase flex justify-between items-center group shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] hover:shadow-none"
-                              >
-                                <span>{item.name}</span>
-                                <ChevronRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                              </button>
-                            ))}
-                        </div>
-                      </div>
+                  {/* Selected Tags */}
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {selection.province && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md text-sm border border-gray-300">
+                        {selection.province.name}
+                        <button
+                          onClick={() => {
+                            setSelection({ province: null, city: null, district: null, subDistrict: null });
+                            setCities([]);
+                            setDistricts([]);
+                            setSubDistricts([]);
+                            setDetailAlamat({ rt: "", rw: "", gang: "", nomor_rumah: "", keterangan: "" });
+                          }}
+                          className="ml-1 text-gray-500 hover:text-red-600 cursor-pointer"
+                        >
+                          ×
+                        </button>
+                      </span>
                     )}
-
+                    {selection.city && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md text-sm border border-gray-300">
+                        {selection.city.name}
+                        <button
+                          onClick={() => {
+                            setSelection(prev => ({ ...prev, city: null, district: null, subDistrict: null }));
+                            setDistricts([]);
+                            setSubDistricts([]);
+                            setDetailAlamat({ rt: "", rw: "", gang: "", nomor_rumah: "", keterangan: "" });
+                          }}
+                          className="ml-1 text-gray-500 hover:text-red-600 cursor-pointer"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    )}
+                    {selection.district && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md text-sm border border-gray-300">
+                        {selection.district.name}
+                        <button
+                          onClick={() => {
+                            setSelection(prev => ({ ...prev, district: null, subDistrict: null }));
+                            setSubDistricts([]);
+                            setDetailAlamat({ rt: "", rw: "", gang: "", nomor_rumah: "", keterangan: "" });
+                          }}
+                          className="ml-1 text-gray-500 hover:text-red-600 cursor-pointer"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    )}
                     {selection.subDistrict && (
-                      <div className="mt-6 border-t-2 border-black pt-6">
-                        <h3 className="text-xl font-black italic uppercase mb-4 text-black">Detail Alamat Tambahan</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-bold uppercase mb-1">RT</label>
-                            <input
-                              type="text"
-                              value={detailAlamat.rt}
-                              onChange={(e) => setDetailAlamat(prev => ({ ...prev, rt: e.target.value }))}
-                              placeholder="Contoh: 001"
-                              className="w-full bg-white border-2 border-black p-2 font-black text-sm placeholder:text-black/30"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-bold uppercase mb-1">RW</label>
-                            <input
-                              type="text"
-                              value={detailAlamat.rw}
-                              onChange={(e) => setDetailAlamat(prev => ({ ...prev, rw: e.target.value }))}
-                              placeholder="Contoh: 003"
-                              className="w-full bg-white border-2 border-black p-2 font-black text-sm placeholder:text-black/30"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-bold uppercase mb-1">Komplek</label>
-                            <input
-                              type="text"
-                              value={detailAlamat.gang}
-                              onChange={(e) => setDetailAlamat(prev => ({ ...prev, gang: e.target.value }))}
-                              placeholder="Contoh: Jl. Mawar 2"
-                              className="w-full bg-white border-2 border-black p-2 font-black text-sm placeholder:text-black/30"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-bold uppercase mb-1">Nomor Rumah</label>
-                            <input
-                              type="text"
-                              value={detailAlamat.nomor_rumah}
-                              onChange={(e) => setDetailAlamat(prev => ({ ...prev, nomor_rumah: e.target.value }))}
-                              placeholder="Contoh: 123"
-                              className="w-full bg-white border-2 border-black p-2 font-black text-sm placeholder:text-black/30"
-                            />
-                          </div>
-                          <div className="md:col-span-2">
-                            <label className="block text-sm font-bold uppercase mb-1">Keterangan Tambahan</label>
-                            <textarea
-                              value={detailAlamat.keterangan}
-                              onChange={(e) => setDetailAlamat(prev => ({ ...prev, keterangan: e.target.value }))}
-                              placeholder="Contoh: Belakang pasar, dekat warung"
-                              className="w-full bg-white border-2 border-black p-2 font-black text-sm resize-none min-h-15 placeholder:text-black/30"
-                            />
-                          </div>
-                        </div>
-                      </div>
+                      <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-md text-sm border border-blue-200">
+                        {selection.subDistrict.name}
+                        <button
+                          onClick={() => {
+                            setSelection(prev => ({ ...prev, subDistrict: null }));
+                            setDetailAlamat({ rt: "", rw: "", gang: "", nomor_rumah: "", keterangan: "" });
+                          }}
+                          className="ml-1 text-blue-500 hover:text-red-600 cursor-pointer"
+                        >
+                          ×
+                        </button>
+                      </span>
                     )}
                   </div>
 
+                  {/* Search Input */}
+                  {!selection.subDistrict && (
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Cari {!selection.province ? "Provinsi" : !selection.city ? "Kota/Kabupaten" : !selection.district ? "Kecamatan" : "Kelurahan/Desa"}
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          placeholder="Ketik untuk mencari..."
+                          className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-transparent"
+                        />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        {isSearching && (
+                          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 animate-spin" />
+                        )}
+                      </div>
+
+                      {/* Search Results */}
+                      <div className="mt-3 space-y-1 max-h-64 overflow-y-auto custom-scrollbar">
+                        {(searchQuery.length > 0 ?
+                          ((!selection.province ? provinces : !selection.city ? cities : !selection.district ? districts : subDistricts)
+                            .filter((item) => item.name.toLowerCase().includes(searchQuery.toLowerCase())))
+                          :
+                          (selection.province && !selection.subDistrict ? (!selection.city ? cities : !selection.district ? districts : subDistricts) : [])
+                        )
+                          .slice(0, 20)
+                          .map((item) => (
+                            <button
+                              key={item.id}
+                              onClick={() => {
+                                if (!selection.province) handleSelectProvince(item);
+                                else if (!selection.city) handleSelectCity(item);
+                                else if (!selection.district) handleSelectDistrict(item);
+                                else handleSelectSubDistrict(item);
+                              }}
+                              className="cursor-pointer w-full text-left px-4 py-3 bg-white hover:bg-gray-50 border border-gray-200 rounded-md transition-colors flex justify-between items-center group"
+                            >
+                              <span className="text-gray-700">{item.name}</span>
+                              <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                            </button>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Detail Alamat Tambahan */}
                   {selection.subDistrict && (
-                    <div className="mt-8 space-y-4">
-                      <div className="bg-black/5 p-4 border-2 border-dashed border-black italic font-bold">
-                        <p className="text-xs uppercase text-black/40 mb-1">Alamat Terpilih:</p>
-                        <p className="text-lg">
+                    <div className="mt-6 pt-6 border-t border-gray-200">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="bg-green-50 p-2 rounded-md">
+                          <Home className="w-5 h-5 text-green-600" />
+                        </div>
+                        <h3 className="text-md font-semibold text-gray-800">Detail Alamat</h3>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">RT</label>
+                          <input
+                            type="text"
+                            value={detailAlamat.rt}
+                            onChange={(e) => setDetailAlamat(prev => ({ ...prev, rt: e.target.value }))}
+                            placeholder="Contoh: 001"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-transparent"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">RW</label>
+                          <input
+                            type="text"
+                            value={detailAlamat.rw}
+                            onChange={(e) => setDetailAlamat(prev => ({ ...prev, rw: e.target.value }))}
+                            placeholder="Contoh: 003"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-transparent"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Nama Jalan / Komplek</label>
+                          <input
+                            type="text"
+                            value={detailAlamat.gang}
+                            onChange={(e) => setDetailAlamat(prev => ({ ...prev, gang: e.target.value }))}
+                            placeholder="Contoh: Jl. Mawar 2"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-transparent"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Nomor Rumah</label>
+                          <input
+                            type="text"
+                            value={detailAlamat.nomor_rumah}
+                            onChange={(e) => setDetailAlamat(prev => ({ ...prev, nomor_rumah: e.target.value }))}
+                            placeholder="Contoh: 123"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-transparent"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Keterangan Tambahan</label>
+                          <textarea
+                            value={detailAlamat.keterangan}
+                            onChange={(e) => setDetailAlamat(prev => ({ ...prev, keterangan: e.target.value }))}
+                            placeholder="Contoh: Belakang pasar, dekat warung, patokan tertentu"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-transparent resize-none min-h-20"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  {selection.subDistrict && (
+                    <div className="mt-8 space-y-3">
+                      <div className="bg-gray-50 p-4 rounded-md border border-gray-200 mb-4">
+                        <p className="text-sm text-gray-600 mb-1">Alamat terpilih:</p>
+                        <p className="text-base font-medium text-gray-800">
                           {selection.subDistrict.name}, {selection.district.name}, {selection.city.name}, {selection.province.name}
                         </p>
-                        <p className="text-xs mt-2 text-black/60">Berat Total (dari state): {cartWeight}g</p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Package className="w-4 h-4 text-gray-500" />
+                          <span className="text-sm text-gray-600">
+                            Total berat: <span className="font-medium text-gray-800">{formatWeight(cartWeight)}</span>
+                          </span>
+                        </div>
                       </div>
-                      {detailAlamat.rt && detailAlamat.rw && detailAlamat.gang && detailAlamat.nomor_rumah && detailAlamat.keterangan ? (
-                        <button
-                          onClick={handleCheckShipping}
-                          className="w-full bg-black text-white py-4 font-black italic uppercase text-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
-                        >
-                          Lihat Ongkir Termurah
-                        </button>
-                      ) : (
-                        <button
-                          className="w-full bg-gray-400 text-white py-4 font-black italic uppercase text-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] cursor-not-allowed"
-                          disabled
-                        >
-                          Lengkapi Detail Alamat
-                        </button>
-                      )}
+
+                      <button
+                        onClick={handleCheckShipping}
+                        disabled={!detailAlamat.rt || !detailAlamat.rw || !detailAlamat.gang || !detailAlamat.nomor_rumah}
+                        className={cn(
+                          "w-full px-6 py-3 rounded-md font-medium transition-colors flex items-center justify-center gap-2",
+                          (!detailAlamat.rt || !detailAlamat.rw || !detailAlamat.gang || !detailAlamat.nomor_rumah)
+                            ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                            : "bg-gray-800 hover:bg-gray-900 text-white"
+                        )}
+                      >
+                        <Truck className="w-5 h-5" />
+                        Lihat Ongkir Termurah
+                      </button>
+
                       <button
                         onClick={() => {
                           setSelection({ province: null, city: null, district: null, subDistrict: null });
                           setSearchQuery("");
                           setDetailAlamat({ rt: "", rw: "", gang: "", nomor_rumah: "", keterangan: "" });
                         }}
-                        className="w-full bg-white border-2 border-black py-2 font-black italic uppercase text-sm"
+                        className="cursor-pointer w-full px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors text-sm"
                       >
                         Reset Pilihan
                       </button>
@@ -594,128 +654,192 @@ export default function AlamatKurirPage() {
             )}
 
             {step === "results" && (
-              <div className="animate-in fade-in zoom-in-95 duration-500 flex flex-col h-full">
+              <div className="space-y-6">
                 {loading ? (
-                  <div className="bg-white border-4 border-black p-20 flex flex-col items-center justify-center gap-6 flex-1">
-                    <Loader2 className="w-16 h-16 animate-spin text-black" />
-                    <p className="text-2xl font-black italic uppercase tracking-widest">Menghitung...</p>
+                  <div className="bg-white rounded-lg border border-gray-200 p-12 flex flex-col items-center justify-center">
+                    <Loading />
                   </div>
                 ) : error ? (
-                  <div className="bg-red-500 border-4 border-black p-8 flex-1 flex flex-col items-center justify-center gap-6 text-white">
-                    <AlertCircle className="w-12 h-12" />
-                    <div className="text-center">
-                      <h3 className="text-2xl font-black italic uppercase">Terjadi Kesalahan!</h3>
-                      <p className="font-bold opacity-90">{error}</p>
+                  <div className="bg-white rounded-lg border border-red-200 p-8 text-center">
+                    <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <AlertCircle className="w-8 h-8 text-red-600" />
                     </div>
+                    <h3 className="text-lg font-semibold text-red-800 mb-2">Terjadi Kesalahan</h3>
+                    <p className="text-red-600 mb-6">{error}</p>
                     <button
                       onClick={() => setStep("address")}
-                      className="mt-4 bg-white text-black px-6 py-2 font-black italic uppercase"
+                      className="px-6 py-2 cursor-pointer bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors"
                     >
-                      Coba Lagi
+                      Kembali ke Alamat
                     </button>
                   </div>
                 ) : (
-                  <div className="flex-1 flex flex-col">
-                    <div className="bg-black text-white p-4 mb-4 shadow-[4px_4px_0px_0px_#f4d03f]">
-                      <h3 className="text-xl font-black italic uppercase tracking-widest">
-                        Semua Ongkir: {allServices.length} Pilihan
-                      </h3>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto pb-4 space-y-4 max-h-[calc(100vh-300px)] custom-scrollbar">
-                      {allServices.map((service, i) => (
-                        <div
-                          key={`${service.courier}-${service.service}-${i}`}
-                          className={cn(
-                            "animate-in fade-in slide-in-from-left-8 bg-white border-4 border-black p-6 flex flex-col gap-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden group cursor-pointer",
-                            i === selectedIndex
-                              ? "bg-yellow-500 border-yellow-500 text-black"
-                              : "hover:bg-gray-100"
-                          )}
-                          style={{ animationDelay: `${i * 50}ms` }}
-                          onClick={() => setSelectedIndex(i)}
-                        >
-                          <div className="absolute top-0 right-0 bg-[#f4d03f] text-black px-4 py-1 font-black italic uppercase translate-x-2 -translate-y-2">
-                            {service.courier}
+                  <>
+                    <div className="bg-white rounded-lg border border-gray-200 p-6">
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-blue-50 p-2 rounded-md">
+                            <Package className="w-5 h-5 text-blue-600" />
                           </div>
-                          <div className="flex items-center justify-between border-b-2 border-black/10 pb-4 last:border-0 last:pb-0">
-                            <div>
-                              <h4 className="text-xl font-black italic uppercase text-black">{service.service}</h4>
-                              <p className="text-sm font-bold text-black/60 uppercase">{service.description || "-"}</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-2xl font-black italic text-black">Rp {service.cost != null ? service.cost.toLocaleString() : 'N/A'}</p>
-                              <p className="text-xs font-bold text-black/40 uppercase tracking-tighter">
-                                Estimasi: {service.etd || '-'}
-                              </p>
-                            </div>
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-800">
+                              Pilihan Kurir ({allServices.length})
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                              Gunakan keyboard ⬆⬇ untuk navigasi, Enter untuk memilih
+                            </p>
                           </div>
                         </div>
-                      ))}
-                    </div>
+                      </div>
 
-                    <div className="sticky bottom-0 bg-linear-to-t from-[#f4d03f] to-[#f4d03f]/80 border-t-2 border-black p-4 pt-6 mt-4">
-                      <div className="flex gap-4">
-                        <button
-                          onClick={() => setStep("address")}
-                          className="flex-1 bg-white border-4 border-black py-4 font-black italic uppercase text-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white transition-all"
-                        >
-                          Ganti Alamat
-                        </button>
-                        <button
-                          onClick={() => handleConfirm(allServices[selectedIndex])}
-                          className="flex-1 bg-black text-white py-4 font-black italic uppercase text-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
-                        >
-                          Pilih & Simpan
-                        </button>
+                      <div className="space-y-3 max-h-125 overflow-y-auto custom-scrollbar">
+                        {allServices.map((service, i) => (
+                          <div
+                            key={`${service.courier}-${service.service}-${i}`}
+                            className={cn(
+                              "border rounded-lg p-5 cursor-pointer transition-all",
+                              i === selectedIndex
+                                ? "border-gray-800 bg-gray-50 ring-2 ring-gray-800"
+                                : "border-gray-200 hover:border-gray-400"
+                            )}
+                            onClick={() => setSelectedIndex(i)}
+                          >
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                              <div className="flex items-start gap-4">
+                                <div className="w-12 h-12 bg-gray-100 rounded-md flex items-center justify-center">
+                                  <Truck className={cn(
+                                    "w-6 h-6",
+                                    i === selectedIndex ? "text-gray-800" : "text-gray-600"
+                                  )} />
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <h4 className="font-semibold text-gray-800 uppercase">{service.courier}</h4>
+                                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs">
+                                      {service.service}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-gray-600">{service.description || "Layanan reguler"}</p>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Estimasi: {service.etd?.toLowerCase() || '-'}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xl font-bold text-gray-800">
+                                  Rp {service.cost?.toLocaleString() || '0'}
+                                </p>
+                                {i === selectedIndex && (
+                                  <span className="text-xs text-green-600 font-medium flex items-center justify-end gap-1 mt-1">
+                                    <CheckCircle className="w-3 h-3" />
+                                    Dipilih
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  </div>
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setStep("address")}
+                        className="flex-1 px-6 py-3 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+                      >
+                        Ganti Alamat
+                      </button>
+                      <button
+                        onClick={() => handleConfirm(allServices[selectedIndex])}
+                        className="flex-1 bg-gray-800 text-white px-6 py-3 rounded-md font-medium hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <CheckCircle className="w-5 h-5" />
+                        Pilih & Simpan
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
             )}
           </div>
 
-          <aside className="w-80 hidden lg:flex flex-col gap-6 animate-in fade-in slide-in-from-right-12 duration-700">
-            <div className="flex-1 bg-black text-white p-6 flex flex-col relative overflow-hidden">
-              <div className="absolute top-0 right-9 text-white/10 font-black text-8xl pointer-events-none select-none italic -mr-8 -mt-4 uppercase">
-                INFO
-              </div>
-              <h3 className="text-xl font-black italic uppercase mb-4 relative z-10">Status Saat Ini</h3>
-              <div className="space-y-4 relative z-10">
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-50">Tujuan</span>
-                  <span className="text-sm font-black italic uppercase truncate">
-                    {selection.subDistrict
-                      ? `${selection.province.name}, ${selection.city.name}, ${selection.district.name}, ${selection.subDistrict.name}`
-                      : "Belum Dipilih"
-                    }
-                  </span>
+          {/* Sidebar Info */}
+          <div className="lg:w-80">
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm sticky top-6">
+              <div className="p-6">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="bg-gray-800 p-2 rounded-md">
+                    <Info className="w-4 h-4 text-white" />
+                  </div>
+                  <h3 className="font-semibold text-gray-800">Ringkasan</h3>
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-50">Berat</span>
-                  <span className="text-sm font-black italic uppercase">{cartWeight}g</span>
-                </div>
-              </div>
-              <div className="mt-auto pt-8">
-                <div className="text-[10px] font-bold italic uppercase tracking-tighter border-t border-white/20 pt-2 flex justify-between items-center">
-                  <span>Lobaca Book Store</span>
+
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">LOKASI TUJUAN</p>
+                    <p className="text-sm text-gray-800 font-medium">
+                      {selection.subDistrict
+                        ? `${selection.province.name}, ${selection.city.name}`
+                        : "Belum dipilih"
+                      }
+                    </p>
+                    {selection.subDistrict && (
+                      <>
+                        <p className="text-sm text-gray-600">
+                          {selection.district.name}, {selection.subDistrict.name}
+                        </p>
+                        {detailAlamat.gang && (
+                          <p className="text-sm text-gray-600 mt-1">
+                            {detailAlamat.nomor_rumah} {detailAlamat.gang}
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  <div className="pt-3 border-t border-gray-100">
+                    <p className="text-xs text-gray-500 mb-1">BERAT PESANAN</p>
+                    <div className="flex items-center gap-2">
+                      <Package className="w-4 h-4 text-gray-500" />
+                      <span className="text-lg font-semibold text-gray-800">
+                        {formatWeight(cartWeight)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {step === "results" && allServices[selectedIndex] && (
+                    <div className="pt-3 border-t border-gray-100">
+                      <p className="text-xs text-gray-500 mb-1">KURIR DIPILIH</p>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-gray-800 uppercase">
+                            {allServices[selectedIndex].courier}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {allServices[selectedIndex].service}
+                          </p>
+                        </div>
+                        <p className="text-lg font-bold text-gray-800">
+                          Rp {allServices[selectedIndex].cost?.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
-          </aside>
-        </div>
-      </main>
-
-      <footer className="bg-black text-white px-8 py-3 flex justify-between items-center z-20">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
           </div>
         </div>
-      </footer>
+      </div>
 
-      <div className="fixed top-[-10%] right-[-10%] w-[40%] h-[40%] bg-black/5 skew-x-[-45deg] z-0 pointer-events-none" />
-      <div className="fixed bottom-[-5%] left-[-10%] w-[30%] h-[30%] bg-white/20 skew-x-[-25deg] z-0 pointer-events-none" />
+      {/* Footer */}
+      <footer className="bg-white border-t border-gray-200 mt-12">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <p className="text-sm text-gray-600 text-center">
+            © {new Date().getFullYear()} Lobaca by Lorelei-Project
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

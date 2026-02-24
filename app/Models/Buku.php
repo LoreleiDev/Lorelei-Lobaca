@@ -51,12 +51,22 @@ class Buku extends Model
         return $avg ? round($avg, 1) : 0;
     }
     public function categories()
-{
-    return $this->belongsToMany(
-        Category::class,
-        'book_categories',
-        'buku_id',
-        'category_id'
-    )->withTimestamps();
-}
+    {
+        return $this->belongsToMany(
+            Category::class,
+            'book_categories',
+            'buku_id',
+            'category_id'
+        )->withTimestamps();
+    }
+
+    public function getCategorySlugAttribute()
+    {
+        return $this->categories->pluck('slug')->filter()->join(',');
+    }
+
+    public function getCategoryLabelsAttribute()
+    {
+        return $this->categories->pluck('name')->filter()->values();
+    }
 }

@@ -2,28 +2,14 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import BookSkeleton, { getSkeletonCount } from "./BookSkeleton";
 
-
-const BOOK_CATEGORIES = [
-    { value: "fiksi", label: "Fiksi" },
-    { value: "non_fiksi", label: "Non-Fiksi" },
-    { value: "seni_kreatif", label: "Seni & Kreatif" },
-    { value: "gaya_hidup", label: "Gaya Hidup" },
-    { value: "pendidikan", label: "Pendidikan" },
-    { value: "buku_anak", label: "Buku Anak" },
-    { value: "komik", label: "Komik" },
-    { value: "novel", label: "Novel" },
-    { value: "majalah", label: "Majalah" },
-];
-
-
-const getCategoryLabels = (categoryString) => {
+const getCategoryLabels = (categoryString, categories) => {
     if (!categoryString) return [];
     return categoryString
         .split(',')
         .map(cat => cat.trim())
         .filter(Boolean)
         .map(cat => {
-            const found = BOOK_CATEGORIES.find(c => c.value === cat);
+            const found = categories.find(c => c.value === cat || c.slug === cat);
             return found ? found.label : cat;
         });
 };
@@ -33,6 +19,10 @@ export default function SearchResults() {
     const query = searchParams.get("q") || "";
     const categories = searchParams.getAll("category");
 
+    // State untuk categories dari database
+    const [BOOK_CATEGORIES, setBookCategories] = useState([]);
+    const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
+
     const [allBooks, setAllBooks] = useState([]);
     const [filteredAndSortedBooks, setFilteredAndSortedBooks] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -41,6 +31,42 @@ export default function SearchResults() {
     const [filterPromo, setFilterPromo] = useState("all");
 
     const lastRequestRef = useRef({ query: null, categories: null });
+
+    // Fetch categories dari database Laravel
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const res = await fetch('/api/public/categories', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (!res.ok) throw new Error('Gagal mengambil kategori');
+
+                const data = await res.json();
+                
+                const formatted = Array.isArray(data) ? data.map(cat => ({
+                    id: cat.id,
+                    name: cat.name,
+                    slug: cat.slug,
+                    value: cat.slug || cat.value,
+                    label: cat.label || cat.name,
+                })) : [];
+
+                setBookCategories(formatted);
+            } catch (err) {
+                console.error('Error fetching categories:', err);
+                setBookCategories([]);
+            } finally {
+                setIsCategoriesLoading(false);
+            }
+        };
+
+        fetchCategories();
+    }, []);
 
     useEffect(() => {
         const fetchSearchResults = async () => {
@@ -145,7 +171,7 @@ export default function SearchResults() {
 
         if (categories.length > 0) {
             const labels = categories.map(cat => {
-                const found = BOOK_CATEGORIES.find(c => c.value === cat);
+                const found = BOOK_CATEGORIES.find(c => c.value === cat || c.slug === cat);
                 return found ? found.label : cat;
             });
             return labels.join(", ");
@@ -154,11 +180,11 @@ export default function SearchResults() {
         return "semua buku";
     };
 
-    if (loading) {
+    if (loading || isCategoriesLoading) {
         return (
             <div className="py-4 md:py-6 px-3 sm:px-4">
                 <div className="max-w-6xl mx-auto">
-                    <h1 className="select-none text-center text-lg sm:text-xl md:text-2xl mb-4 md:mb-6 text-gray-200" style={{ fontFamily: "Rubik Mono One" }}>
+                    <h1 className="select-none text-center text-lg sm:text-xl md:text-2xl mb-4 md:mb-6 text-gray-900" style={{ fontFamily: "Rubik Mono One" }}>
                         HASIL PENCARIAN
                     </h1>
                     <p className="text-center text-gray-200 mb-4">Mencari: {displayLabel()}</p>
@@ -181,7 +207,7 @@ export default function SearchResults() {
         return (
             <div className="py-3 md:py-4 px-3 sm:px-4">
                 <div className="max-w-6xl mx-auto">
-                    <h1 className="mt-16 select-none text-center text-lg sm:text-xl md:text-2xl mb-4 md:mb-6 text-gray-200" style={{ fontFamily: "Rubik Mono One" }}>
+                    <h1 className="mt-16 select-none text-center text-lg sm:text-xl md:text-2xl mb-4 md:mb-6 text-gray-900" style={{ fontFamily: "Rubik Mono One" }}>
                         HASIL PENCARIAN
                     </h1>
                     <p className="text-center text-gray-200 mb-2">Tidak ada buku untuk: {displayLabel()}</p>
@@ -201,7 +227,7 @@ export default function SearchResults() {
                         </select>
                     </div>
                     <div className="flex justify-center mt-6">
-                        <Link to="/" className="text-xs md:text-sm font-bold text-yellow-600 hover:text-yellow-200 transition-colors">
+                        <Link to="/" className="text-xs md:text-sm font-bold text-black hover:text-gray-700 transition-colors">
                             ← Kembali ke Beranda
                         </Link>
                     </div>
@@ -213,10 +239,10 @@ export default function SearchResults() {
     return (
         <div className="py-3 md:py-4 px-3 sm:px-4">
             <div className="max-w-6xl mx-auto">
-                <h1 className="mt-16 select-none text-center text-lg sm:text-xl md:text-2xl mb-2 md:mb-4 text-gray-200" style={{ fontFamily: "Rubik Mono One" }}>
+                <h1 className="mt-16 select-none text-center text-lg sm:text-xl md:text-2xl mb-2 md:mb-4 text-gray-900" style={{ fontFamily: "Rubik Mono One" }}>
                     HASIL PENCARIAN
                 </h1>
-                <p className="text-center text-gray-200 mb-4">Untuk: <strong>{displayLabel()}</strong></p>
+                <p className="text-center text-gray-900 mb-4">Untuk: <strong>{displayLabel()}</strong></p>
                 <div className="flex flex-wrap gap-2 justify-center mb-6">
                     <select value={filterPromo} onChange={e => setFilterPromo(e.target.value)} className="text-xs border border-gray-300 rounded px-2 py-1 bg-white">
                         <option value="all">Semua Buku</option>
@@ -233,7 +259,7 @@ export default function SearchResults() {
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     {filteredAndSortedBooks.map(book => {
-                        const categoryLabels = getCategoryLabels(book.category);
+                        const categoryLabels = getCategoryLabels(book.category, BOOK_CATEGORIES);
                         return (
                             <div
                                 key={book.id}

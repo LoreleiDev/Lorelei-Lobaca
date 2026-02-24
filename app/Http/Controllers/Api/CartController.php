@@ -73,7 +73,6 @@ class CartController extends Controller
                     'penulis' => $buku->penulis,
                     'harga' => $buku->harga,
                     'foto' => $buku->foto,
-                    'kategori' => $buku->kategori,
                     'berat' => $buku->berat,
                     'stok' => $buku->stok,
                     'discount_percent' => (int) $discountPercent,

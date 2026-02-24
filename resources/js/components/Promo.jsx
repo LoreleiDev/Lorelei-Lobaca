@@ -18,28 +18,22 @@ const Toast = Swal.mixin({
     }
 });
 
-const BOOK_CATEGORIES = [
-    { value: "fiksi", label: "Fiksi" },
-    { value: "non_fiksi", label: "Non-Fiksi" },
-    { value: "seni_kreatif", label: "Seni & Kreatif" },
-    { value: "gaya_hidup", label: "Gaya Hidup" },
-    { value: "pendidikan", label: "Pendidikan" },
-    { value: "buku_anak", label: "Buku Anak" },
-    { value: "komik", label: "Komik" },
-    { value: "novel", label: "Novel" },
-    { value: "majalah", label: "Majalah" },
-];
 
-const getCategoryLabels = (categoryString) => {
-    if (!categoryString) return [];
-    return categoryString
-        .split(",")
-        .map((cat) => cat.trim())
-        .filter(Boolean)
-        .map((cat) => {
-            const found = BOOK_CATEGORIES.find((c) => c.value === cat);
-            return found ? found.label : cat;
-        });
+const getCategoryLabels = (categoryString, categories) => {
+    if (!categoryString || !categories?.length) return [];
+
+    const cats = Array.isArray(categoryString)
+        ? categoryString
+        : categoryString.split(",").map((cat) => cat.trim()).filter(Boolean);
+
+    return cats.map((cat) => {
+        const found = categories.find(c =>
+            String(c.value) === String(cat) ||
+            String(c.slug) === String(cat) ||
+            String(c.id) === String(cat)
+        );
+        return found ? found.label : cat;
+    });
 };
 
 const getDiscountPercent = (originalPrice, discountPrice) => {
@@ -85,6 +79,46 @@ export default function PromoListPage() {
     const [promos, setPromos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [processingPromo, setProcessingPromo] = useState(null);
+
+
+    const [BOOK_CATEGORIES, setBookCategories] = useState([]);
+    const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
+
+
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const res = await fetch('/api/public/categories', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (!res.ok) throw new Error('Gagal mengambil kategori');
+
+                const data = await res.json();
+
+                const formatted = Array.isArray(data) ? data.map(cat => ({
+                    id: cat.id,
+                    name: cat.name,
+                    slug: cat.slug,
+                    value: cat.slug || cat.value,
+                    label: cat.label || cat.name,
+                })) : [];
+
+                setBookCategories(formatted);
+            } catch (err) {
+                console.error('Error fetching categories:', err);
+                setBookCategories([]);
+            } finally {
+                setIsCategoriesLoading(false);
+            }
+        };
+
+        fetchCategories();
+    }, []);
 
     useEffect(() => {
         const fetchPromos = async () => {
@@ -161,9 +195,7 @@ export default function PromoListPage() {
                 }
             }
 
-
             window.dispatchEvent(new Event('wishlistUpdated'));
-
 
             await refetchWishlist();
 
@@ -194,7 +226,8 @@ export default function PromoListPage() {
         }
     };
 
-    if (loading) {
+
+    if (loading || isCategoriesLoading) {
         return (
             <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
                 <Loading />
@@ -277,7 +310,6 @@ export default function PromoListPage() {
                                             </div>
 
                                             <div className="flex gap-2">
-                                                {/* Tombol Wishlist */}
                                                 <div className="relative w-fit">
                                                     <button
                                                         onClick={(e) => {
@@ -312,8 +344,10 @@ export default function PromoListPage() {
                                                 <h3 className="font-semibold text-gray-900 mb-4 text-lg">Buku dalam Promo</h3>
                                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                                                     {visibleBooks.map((book) => {
-                                                        const categoryLabels = getCategoryLabels(book.category);
                                                         const discountPercent = getDiscountPercent(book.originalPrice, book.discountPrice);
+
+
+                                                        const categoryLabels = getCategoryLabels(book.category, BOOK_CATEGORIES);
 
                                                         return (
                                                             <div
@@ -356,6 +390,8 @@ export default function PromoListPage() {
                                                                         </h3>
                                                                         <p className="text-xs text-gray-600 mb-2">by {book.author}</p>
                                                                     </div>
+
+                                                                    {/* ✅ Kategori badge - pakai data dari DB */}
                                                                     {categoryLabels.length > 0 && (
                                                                         <div className="mb-3">
                                                                             <div className="flex flex-wrap gap-1">
@@ -370,6 +406,7 @@ export default function PromoListPage() {
                                                                             </div>
                                                                         </div>
                                                                     )}
+
                                                                     <div className="flex items-center justify-between mt-auto">
                                                                         <div className="flex flex-col">
                                                                             {book.originalPrice !== book.discountPrice ? (

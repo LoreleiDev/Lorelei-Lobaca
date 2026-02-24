@@ -6,28 +6,22 @@ import Loading from "./ui/Loading";
 import HeartAnimation from "./ui/AnimatedHeart";
 import { CartProvider } from '../hooks/UseCart';
 
-const BOOK_CATEGORIES = [
-    { value: "fiksi", label: "Fiksi" },
-    { value: "non_fiksi", label: "Non-Fiksi" },
-    { value: "seni_kreatif", label: "Seni & Kreatif" },
-    { value: "gaya_hidup", label: "Gaya Hidup" },
-    { value: "pendidikan", label: "Pendidikan" },
-    { value: "buku_anak", label: "Buku Anak" },
-    { value: "komik", label: "Komik" },
-    { value: "novel", label: "Novel" },
-    { value: "majalah", label: "Majalah" },
-];
 
-const getCategoryLabels = (categoryString) => {
-    if (!categoryString) return [];
-    return categoryString
-        .split(',')
-        .map(cat => cat.trim())
-        .filter(Boolean)
-        .map(cat => {
-            const found = BOOK_CATEGORIES.find(c => c.value === cat);
-            return found ? found.label : cat;
-        });
+const getCategoryLabels = (categoryString, categories) => {
+    if (!categoryString || !categories?.length) return [];
+
+    const cats = Array.isArray(categoryString)
+        ? categoryString
+        : categoryString.split(',').map(cat => cat.trim()).filter(Boolean);
+
+    return cats.map(cat => {
+        const found = categories.find(c =>
+            String(c.value) === String(cat) ||
+            String(c.slug) === String(cat) ||
+            String(c.id) === String(cat)
+        );
+        return found ? found.label : cat;
+    });
 };
 
 const getDiscountPercent = (originalPrice, discountPrice) => {
@@ -48,6 +42,46 @@ export default function WishlistPage() {
     const { token } = useAuth();
     const [wishlistBooks, setWishlistBooks] = useState([]);
     const [loading, setLoading] = useState(true);
+
+
+    const [BOOK_CATEGORIES, setBookCategories] = useState([]);
+    const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
+
+
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const res = await fetch('/api/public/categories', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (!res.ok) throw new Error('Gagal mengambil kategori');
+
+                const data = await res.json();
+
+                const formatted = Array.isArray(data) ? data.map(cat => ({
+                    id: cat.id,
+                    name: cat.name,
+                    slug: cat.slug,
+                    value: cat.slug || cat.value,
+                    label: cat.label || cat.name,
+                })) : [];
+
+                setBookCategories(formatted);
+            } catch (err) {
+                console.error('Error fetching categories:', err);
+                setBookCategories([]);
+            } finally {
+                setIsCategoriesLoading(false);
+            }
+        };
+
+        fetchCategories();
+    }, []);
 
     useEffect(() => {
         const fetchWishlist = async () => {
@@ -82,7 +116,8 @@ export default function WishlistPage() {
         fetchWishlist();
     }, [token]);
 
-    if (loading) {
+
+    if (loading || isCategoriesLoading) {
         return (
             <>
                 <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
@@ -141,7 +176,9 @@ export default function WishlistPage() {
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                             {wishlistBooks.map((book) => {
                                 const discountPercent = getDiscountPercent(book.originalPrice, book.discountPrice);
-                                const categoryLabels = getCategoryLabels(book.category);
+
+
+                                const categoryLabels = getCategoryLabels(book.category, BOOK_CATEGORIES);
 
                                 return (
                                     <div
@@ -177,6 +214,7 @@ export default function WishlistPage() {
                                                 <p className="text-xs text-gray-600 mb-1">by {book.author}</p>
                                             </div>
 
+                                            {/* ✅ Kategori badge - pakai data dari DB */}
                                             {categoryLabels.length > 0 && (
                                                 <div className="mt-1 flex flex-wrap gap-1">
                                                     {categoryLabels.map((label, i) => (

@@ -19,30 +19,6 @@ const Toast = Swal.mixin({
     }
 });
 
-const BOOK_CATEGORIES = [
-    { value: "fiksi", label: "Fiksi" },
-    { value: "non_fiksi", label: "Non-Fiksi" },
-    { value: "seni_kreatif", label: "Seni & Kreatif" },
-    { value: "gaya_hidup", label: "Gaya Hidup" },
-    { value: "pendidikan", label: "Pendidikan" },
-    { value: "buku_anak", label: "Buku Anak" },
-    { value: "komik", label: "Komik" },
-    { value: "novel", label: "Novel" },
-    { value: "majalah", label: "Majalah" },
-];
-
-const getCategoryLabels = (categoryString) => {
-    if (!categoryString) return [];
-    return categoryString
-        .split(",")
-        .map((cat) => cat.trim())
-        .filter(Boolean)
-        .map((cat) => {
-            const found = BOOK_CATEGORIES.find((c) => c.value === cat);
-            return found ? found.label : cat;
-        });
-};
-
 const paymentMethodLabels = {
     "ovo": "OVO",
     "gopay": "GoPay",
@@ -123,7 +99,6 @@ export default function KeranjangPage() {
 
     const updateQuantity = async (itemId, newQuantity, maxStok) => {
         if (newQuantity < 1) {
-
             removeItem(itemId);
             return;
         }
@@ -330,6 +305,7 @@ export default function KeranjangPage() {
                                             const discountedPrice = originalPrice - discountAmount;
                                             const itemTotal = discountedPrice * item.jumlah;
                                             const maxStok = item.buku.stok;
+
                                             return (
                                                 <div key={item.cart_item_id} className="p-4 flex flex-col sm:flex-row gap-4">
                                                     <img
@@ -354,18 +330,9 @@ export default function KeranjangPage() {
                                                             </button>
                                                         </div>
                                                         <p className="text-gray-600 text-sm">{item.buku.penulis}</p>
-                                                        {item.buku.kategori && (
-                                                            <div className="mt-1 flex flex-wrap gap-1">
-                                                                {getCategoryLabels(item.buku.kategori).map((label, i) => (
-                                                                    <span
-                                                                        key={i}
-                                                                        className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full truncate"
-                                                                    >
-                                                                        {label}
-                                                                    </span>
-                                                                ))}
-                                                            </div>
-                                                        )}
+
+                                                        {/* ✅ Category labels dihapus */}
+
                                                         <div className="mt-3 flex items-center justify-between">
                                                             <div className="flex items-center gap-2">
                                                                 <button
@@ -512,4 +479,4 @@ export default function KeranjangPage() {
             )}
         </>
     );
-}
+} 

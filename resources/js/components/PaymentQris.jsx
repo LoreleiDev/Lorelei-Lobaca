@@ -34,7 +34,6 @@ export default function PaymentQris() {
         };
     }, [showDetailModal]);
 
-    // Fetch QR Code dari API jika tidak ada di state
     useEffect(() => {
         if (!orderId || qrCodeData) return;
         

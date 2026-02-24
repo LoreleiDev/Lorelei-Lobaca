@@ -18,7 +18,8 @@ class BookPublicController extends Controller
         $unlimited = $request->query('unlimited', false);
 
         if ($type !== 'promo') {
-            $query = Buku::with('admin', 'reviews')
+            // ✅ Eager load categories
+            $query = Buku::with('admin', 'reviews', 'categories')
                 ->where('harga', '>', 0)
                 ->where('stok', '>', 0);
 
@@ -31,13 +32,13 @@ class BookPublicController extends Controller
                                     ->where('start_time', '<=', $now->format('H:i'));
                             });
                     })
-                        ->where(function ($sub) use ($now) {
-                            $sub->where('end_date', '>', $now->toDateString())
-                                ->orWhere(function ($s) use ($now) {
-                                    $s->where('end_date', '=', $now->toDateString())
-                                        ->where('end_time', '>', $now->format('H:i'));
-                                });
-                        });
+                    ->where(function ($sub) use ($now) {
+                        $sub->where('end_date', '>', $now->toDateString())
+                            ->orWhere(function ($s) use ($now) {
+                                $s->where('end_date', '=', $now->toDateString())
+                                    ->where('end_time', '>', $now->format('H:i'));
+                            });
+                    });
                 });
             }
 
@@ -56,23 +57,23 @@ class BookPublicController extends Controller
                         ->where('start_time', '<=', $now->format('H:i'));
                 });
         })
-            ->where(function ($q) use ($now) {
-                $q->where('end_date', '>', $now->toDateString())
-                    ->orWhere(function ($sub) use ($now) {
-                        $sub->where('end_date', '=', $now->toDateString())
-                            ->where('end_time', '>', $now->format('H:i'));
-                    });
-            })
-            ->orderBy('start_date', 'desc')
-            ->limit(10)
-            ->get();
+        ->where(function ($q) use ($now) {
+            $q->where('end_date', '>', $now->toDateString())
+                ->orWhere(function ($sub) use ($now) {
+                    $sub->where('end_date', '=', $now->toDateString())
+                        ->where('end_time', '>', $now->format('H:i'));
+                });
+        })
+        ->orderBy('start_date', 'desc')
+        ->limit(10)
+        ->get();
 
         $resultBooks = [];
         foreach ($activePromos as $promo) {
             $booksInPromo = $promo->books()
                 ->where('buku.harga', '>', 0)
                 ->where('buku.stok', '>', 0)
-                ->with(['admin', 'reviews'])
+                ->with(['admin', 'reviews', 'categories'])
                 ->limit(5)
                 ->get();
 
@@ -97,7 +98,9 @@ class BookPublicController extends Controller
                     'has_promo' => true,
                     'promo_id' => $promo->id,
                     'promo_name' => $promo->name,
-                    'category' => $book->kategori,
+                    
+                    // ✅ PENTING: Return kategori dari relasi (slug untuk matching)
+                    'category' => $book->categories->pluck('slug')->filter()->join(','),
                 ];
 
                 if (!$unlimited && count($resultBooks) >= $limit) {
@@ -119,35 +122,34 @@ class BookPublicController extends Controller
             return response()->json([]);
         }
 
-        $query = Buku::with(['admin', 'reviews'])
+        // ✅ Eager load categories
+        $query = Buku::with(['admin', 'reviews', 'categories'])
             ->where('harga', '>', 0)
             ->where('stok', '>', 0);
 
+        // ✅ Filter by category slug via pivot table
         if (!empty($categories)) {
             if (!is_array($categories)) {
                 $categories = [$categories];
             }
-
             $categories = array_map('trim', $categories);
             $categories = array_filter($categories);
             $categories = array_unique($categories);
 
             if (!empty($categories)) {
-                $query->where(function ($q) use ($categories) {
-                    foreach ($categories as $cat) {
-                        $q->orWhere('kategori', 'ILIKE', "%{$cat}%");
-                    }
+                $query->whereHas('categories', function ($q) use ($categories) {
+                    $q->whereIn('slug', $categories);
                 });
             }
         }
 
+        // ✅ Search by text fields
         if (strlen($searchTerm) >= 1) {
             $searchTerm = strtolower($searchTerm);
             $query->where(function ($q) use ($searchTerm) {
                 $q->whereRaw('LOWER(judul) ILIKE ?', ["%{$searchTerm}%"])
                     ->orWhereRaw('LOWER(penulis) ILIKE ?', ["%{$searchTerm}%"])
-                    ->orWhereRaw('LOWER(penerbit) ILIKE ?', ["%{$searchTerm}%"])
-                    ->orWhereRaw('LOWER(kategori) ILIKE ?', ["%{$searchTerm}%"]);
+                    ->orWhereRaw('LOWER(penerbit) ILIKE ?', ["%{$searchTerm}%"]);
             });
         }
 
@@ -157,7 +159,8 @@ class BookPublicController extends Controller
 
     public function showById($id)
     {
-        $book = Buku::with('admin', 'reviews')->find($id);
+        // ✅ Eager load categories
+        $book = Buku::with('admin', 'reviews', 'categories')->find($id);
 
         if (!$book || $book->harga <= 0 || $book->stok <= 0) {
             return response()->json(['message' => 'Buku tidak ditemukan'], 404);
@@ -172,21 +175,21 @@ class BookPublicController extends Controller
         $activePromo = Promo::whereHas('books', function ($q) use ($book) {
             $q->where('promo_buku.buku_id', $book->buku_id);
         })
-            ->where(function ($q) use ($now) {
-                $q->where('start_date', '<', $now->toDateString())
-                    ->orWhere(function ($sub) use ($now) {
-                        $sub->where('start_date', '=', $now->toDateString())
-                            ->where('start_time', '<=', $now->format('H:i'));
-                    });
-            })
-            ->where(function ($q) use ($now) {
-                $q->where('end_date', '>', $now->toDateString())
-                    ->orWhere(function ($sub) use ($now) {
-                        $sub->where('end_date', '=', $now->toDateString())
-                            ->where('end_time', '>', $now->format('H:i'));
-                    });
-            })
-            ->first();
+        ->where(function ($q) use ($now) {
+            $q->where('start_date', '<', $now->toDateString())
+                ->orWhere(function ($sub) use ($now) {
+                    $sub->where('start_date', '=', $now->toDateString())
+                        ->where('start_time', '<=', $now->format('H:i'));
+                });
+        })
+        ->where(function ($q) use ($now) {
+            $q->where('end_date', '>', $now->toDateString())
+                ->orWhere(function ($sub) use ($now) {
+                    $sub->where('end_date', '=', $now->toDateString())
+                        ->where('end_time', '>', $now->format('H:i'));
+                });
+        })
+        ->first();
 
         if ($activePromo) {
             $promoBook = $activePromo->books()->where('promo_buku.buku_id', $book->buku_id)->first();
@@ -216,7 +219,11 @@ class BookPublicController extends Controller
             'discountPercent' => $discountPercent,
             'rating' => (float) $book->average_rating,
             'deskripsi' => $book->deskripsi,
-            'kategori' => $book->kategori,
+            
+            // ✅ PENTING: Return kategori dari relasi
+            'category' => $book->categories->pluck('slug')->filter()->join(','),
+            'category_labels' => $book->categories->pluck('name')->filter()->values(),
+            
             'has_promo' => $hasPromo,
             'promo_name' => $promoName,
             'slug' => str($book->judul)->slug()->toString(),
@@ -226,80 +233,22 @@ class BookPublicController extends Controller
     public function getBooksByIds(Request $request)
     {
         $ids = $request->query('ids', []);
-        if (empty($ids)) {
-            return response()->json([]);
-        }
+        if (empty($ids)) return response()->json([]);
 
         $ids = array_filter(array_map('intval', $ids), fn($id) => $id > 0);
-        if (empty($ids)) {
-            return response()->json([]);
-        }
+        if (empty($ids)) return response()->json([]);
 
         $now = Carbon::now('Asia/Jakarta');
 
-        $books = Buku::with(['admin', 'reviews'])
+        // ✅ Eager load categories
+        $books = Buku::with(['admin', 'reviews', 'categories'])
             ->whereIn('buku_id', $ids)
-            ->select('buku_id', 'judul', 'penulis', 'harga', 'foto', 'kategori')
+            ->select('buku_id', 'judul', 'penulis', 'harga', 'foto')
             ->get()
             ->map(function ($book) use ($now) {
-                
                 $activePromo = Promo::whereHas('books', function ($q) use ($book) {
                     $q->where('promo_buku.buku_id', $book->buku_id);
                 })
-                    ->where(function ($q) use ($now) {
-                    $q->where('start_date', '<', $now->toDateString())
-                        ->orWhere(function ($sub) use ($now) {
-                            $sub->where('start_date', '=', $now->toDateString())
-                                ->where('start_time', '<=', $now->format('H:i'));
-                        });
-                })
-                    ->where(function ($q) use ($now) {
-                    $q->where('end_date', '>', $now->toDateString())
-                        ->orWhere(function ($sub) use ($now) {
-                            $sub->where('end_date', '=', $now->toDateString())
-                                ->where('end_time', '>', $now->format('H:i'));
-                        });
-                })
-                    ->first();
-
-                $discountPercent = null;
-                $discountPrice = (int) $book->harga;
-
-                if ($activePromo) {
-                    $promoBook = $activePromo->books()->where('promo_buku.buku_id', $book->buku_id)->first();
-                    if ($promoBook && $promoBook->pivot) {
-                        $discountPercent = $promoBook->pivot->discount_percent;
-                        if (is_numeric($discountPercent) && $discountPercent > 0) {
-                            $discountPrice = $book->harga - ($book->harga * $discountPercent / 100);
-                        }
-                    }
-                }
-                return [
-                    'id' => $book->buku_id,
-                    'title' => $book->judul,
-                    'author' => $book->penulis,
-                    'originalPrice' => (int) $book->harga,
-                    'discountPrice' => (int) $discountPrice,
-                    'discountPercent' => $discountPercent, 
-                    'image' => $book->foto,
-                    'slug' => str($book->judul)->slug()->toString(),
-                    'category' => $book->kategori,
-                    'rating' => (float) $book->average_rating,
-                ];
-            });
-
-        return response()->json($books);
-    }
-    private function formatBooks($books, $now)
-    {
-        return $books->map(function ($book) use ($now) {
-            $hasPromo = false;
-            $discountPrice = (int) $book->harga;
-            $promoName = null;
-
-            $activePromo = Promo::whereHas('books', function ($q) use ($book) {
-                $q->where('promo_buku.buku_id', $book->buku_id);
-            })
                 ->where(function ($q) use ($now) {
                     $q->where('start_date', '<', $now->toDateString())
                         ->orWhere(function ($sub) use ($now) {
@@ -315,6 +264,66 @@ class BookPublicController extends Controller
                         });
                 })
                 ->first();
+
+                $discountPercent = null;
+                $discountPrice = (int) $book->harga;
+
+                if ($activePromo) {
+                    $promoBook = $activePromo->books()->where('promo_buku.buku_id', $book->buku_id)->first();
+                    if ($promoBook && $promoBook->pivot) {
+                        $discountPercent = $promoBook->pivot->discount_percent;
+                        if (is_numeric($discountPercent) && $discountPercent > 0) {
+                            $discountPrice = $book->harga - ($book->harga * $discountPercent / 100);
+                        }
+                    }
+                }
+
+                return [
+                    'id' => $book->buku_id,
+                    'title' => $book->judul,
+                    'author' => $book->penulis,
+                    'originalPrice' => (int) $book->harga,
+                    'discountPrice' => (int) $discountPrice,
+                    'discountPercent' => $discountPercent,
+                    'image' => $book->foto,
+                    'slug' => str($book->judul)->slug()->toString(),
+                    
+                    // ✅ PENTING: Return kategori dari relasi
+                    'category' => $book->categories->pluck('slug')->filter()->join(','),
+                    
+                    'rating' => (float) $book->average_rating,
+                ];
+            });
+
+        return response()->json($books);
+    }
+
+    private function formatBooks($books, $now)
+    {
+        return $books->map(function ($book) use ($now) {
+            $hasPromo = false;
+            $discountPrice = (int) $book->harga;
+            $promoName = null;
+            $discountPercent = null;
+
+            $activePromo = Promo::whereHas('books', function ($q) use ($book) {
+                $q->where('promo_buku.buku_id', $book->buku_id);
+            })
+            ->where(function ($q) use ($now) {
+                $q->where('start_date', '<', $now->toDateString())
+                    ->orWhere(function ($sub) use ($now) {
+                        $sub->where('start_date', '=', $now->toDateString())
+                            ->where('start_time', '<=', $now->format('H:i'));
+                    });
+            })
+            ->where(function ($q) use ($now) {
+                $q->where('end_date', '>', $now->toDateString())
+                    ->orWhere(function ($sub) use ($now) {
+                        $sub->where('end_date', '=', $now->toDateString())
+                            ->where('end_time', '>', $now->format('H:i'));
+                    });
+            })
+            ->first();
 
             if ($activePromo) {
                 $promoBook = $activePromo->books()->where('promo_buku.buku_id', $book->buku_id)->first();
@@ -335,12 +344,13 @@ class BookPublicController extends Controller
                 'image' => $book->foto,
                 'originalPrice' => (int) $book->harga,
                 'discountPrice' => (int) $discountPrice,
-                'discountPercent' => $activePromo ? $discountPercent : null,
+                'discountPercent' => $discountPercent,
                 'rating' => (float) $book->average_rating,
                 'slug' => str($book->judul)->slug()->toString(),
                 'has_promo' => $hasPromo,
                 'promo_name' => $promoName,
-                'category' => $book->kategori,
+                
+                'category' => $book->categories->pluck('slug')->filter()->join(','),
             ];
         });
     }

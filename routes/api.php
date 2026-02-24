@@ -1,6 +1,5 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\AuthController;
@@ -47,6 +46,8 @@ Route::get('/promos/featured', [PromoPublicController::class, 'featured']);
 Route::get('/promos/{id}', [PromoPublicController::class, 'show']);
 Route::get('/search/books', [BookPublicController::class, 'search']);
 Route::get('/book/{id}', [BookPublicController::class, 'showById']);
+Route::get('/public/categories', [\App\Http\Controllers\Api\CategoryController::class, 'index']);
+Route::get('/public/categories/{slug}', [\App\Http\Controllers\Api\CategoryController::class, 'show']);
 
 Route::get('/books/{bookId}/reviews', [ReviewController::class, 'index']);
 Route::get('/testimonials/public', [ReviewController::class, 'getTestimonialsForPublic']);

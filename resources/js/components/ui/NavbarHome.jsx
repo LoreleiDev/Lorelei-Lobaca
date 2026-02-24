@@ -23,23 +23,11 @@ import { useCart } from "@/hooks/UseCart";
 import { useWishlist } from "@/hooks/WishlistProvider";
 import { useNotification } from "@/hooks/NotificationProvider";
 
-const BOOK_CATEGORIES = [
-    { value: "fiksi", label: "Fiksi" },
-    { value: "non_fiksi", label: "Non-Fiksi" },
-    { value: "seni_kreatif", label: "Seni & Kreatif" },
-    { value: "gaya_hidup", label: "Gaya Hidup" },
-    { value: "pendidikan", label: "Pendidikan" },
-    { value: "buku_anak", label: "Buku Anak" },
-    { value: "komik", label: "Komik" },
-    { value: "novel", label: "Novel" },
-    { value: "majalah", label: "Majalah" },
-];
-
-const getCategoryLabel = (categoryString) => {
+const getCategoryLabel = (categoryString, categories) => {
     if (!categoryString) return [];
-    const categories = categoryString.split(',').map(cat => cat.trim()).filter(Boolean);
-    return categories.map(cat => {
-        const found = BOOK_CATEGORIES.find(c => c.value === cat);
+    const cats = categoryString.split(',').map(cat => cat.trim()).filter(Boolean);
+    return cats.map(cat => {
+        const found = categories.find(c => c.value === cat || c.slug === cat);
         return found ? found.label : cat;
     });
 };
@@ -76,15 +64,16 @@ export default function NavbarHome() {
         const cartContext = useCart();
         const wishlistContext = useWishlist();
         const notificationContext = useNotification();
-
         cartItemCount = cartContext?.cartItemCount || 0;
         wishlistCount = wishlistContext?.wishlistCount || 0;
         unreadCount = notificationContext?.unreadCount || 0;
-        refetchWishlist = wishlistContext?.refetch || (() => { });
-        refetchNotifications = notificationContext?.refetch || (() => { });
     } catch (error) {
         console.warn("Context not available, using fallback values");
     }
+
+    // State untuk categories dari database
+    const [BOOK_CATEGORIES, setBookCategories] = useState([]);
+    const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
 
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
@@ -94,9 +83,47 @@ export default function NavbarHome() {
     const [isSearching, setIsSearching] = useState(false);
     const [showDropdown, setShowDropdown] = useState(false);
     const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+
     const searchRef = useRef(null);
     const profileRef = useRef(null);
 
+    // Fetch categories dari database Laravel
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const res = await fetch('/api/public/categories', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (!res.ok) throw new Error('Gagal mengambil kategori');
+
+                const data = await res.json();
+
+                const formatted = Array.isArray(data) ? data.map(cat => ({
+                    id: cat.id,
+                    name: cat.name,
+                    slug: cat.slug,
+                    value: cat.slug || cat.value,
+                    label: cat.label || cat.name,
+                })) : [];
+
+                setBookCategories(formatted);
+            } catch (err) {
+                console.error('Error fetching categories:', err);
+                setBookCategories([]);
+            } finally {
+                setIsCategoriesLoading(false);
+            }
+        };
+
+        fetchCategories();
+    }, []);
+
+    // Search effect
     useEffect(() => {
         if (!searchQuery.trim() && selectedCategories.length === 0) {
             setSearchResults([]);
@@ -106,11 +133,13 @@ export default function NavbarHome() {
         const delay = setTimeout(async () => {
             setIsSearching(true);
             let finalResults = [];
+
             try {
                 if (searchQuery.trim()) {
                     const params = new URLSearchParams();
                     params.append('q', searchQuery.trim());
                     selectedCategories.forEach(cat => params.append('category', cat));
+
                     const res = await fetch(`/api/search/books?${params.toString()}`);
                     finalResults = res.ok ? await res.json() : [];
                 } else if (selectedCategories.length > 0) {
@@ -121,8 +150,10 @@ export default function NavbarHome() {
                             .then(r => (r.ok ? r.json() : []))
                             .catch(() => []);
                     });
+
                     const allResults = await Promise.all(fetchPromises);
                     const resultMap = new Map();
+
                     for (const books of allResults) {
                         for (const book of books) {
                             if (!resultMap.has(book.id)) {
@@ -144,6 +175,7 @@ export default function NavbarHome() {
         return () => clearTimeout(delay);
     }, [searchQuery, selectedCategories]);
 
+    // Click outside handler
     useEffect(() => {
         const handleClickOutside = (e) => {
             if (searchRef.current && !searchRef.current.contains(e.target)) {
@@ -243,8 +275,9 @@ export default function NavbarHome() {
             confirmButtonColor: '#d33',
             cancelButtonColor: '#3085d6',
             confirmButtonText: 'Ya, Logout!',
-            cancelButtonButtonText: 'Batal',
+            cancelButtonText: 'Batal',
         });
+
         if (result.isConfirmed) {
             try {
                 const token = localStorage.getItem('user_token');
@@ -296,8 +329,8 @@ export default function NavbarHome() {
                                         type="button"
                                         onClick={handleCategoryButtonClick}
                                         className={`p-2 mr-2 rounded-md transition-all duration-200 cursor-pointer flex items-center gap-2 ${selectedCategories.length > 0
-                                            ? "bg-white/20 text-white"
-                                            : "hover:bg-white/10 text-white/80"
+                                                ? "bg-white/20 text-white"
+                                                : "hover:bg-white/10 text-white/80"
                                             }`}
                                         aria-label="Filter categories"
                                     >
@@ -309,7 +342,8 @@ export default function NavbarHome() {
                                         </span>
                                         <ChevronDown
                                             size={14}
-                                            className={`transition-transform duration-200 ${showDropdown ? "rotate-180" : ""}`}
+                                            className={`transition-transform duration-200 ${showDropdown ? "rotate-180" : ""
+                                                }`}
                                         />
                                     </Button>
                                 </div>
@@ -354,20 +388,31 @@ export default function NavbarHome() {
                                                 )}
                                             </div>
                                             <div className="space-y-1 max-h-48 overflow-y-auto overflow-x-hidden">
-                                                {BOOK_CATEGORIES.map((item) => (
-                                                    <label
-                                                        key={item.value}
-                                                        className="flex items-center gap-3 p-2 bg-white text-gray-700 hover:bg-gray-50 rounded cursor-pointer transition-colors"
-                                                    >
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={selectedCategories.includes(item.value)}
-                                                            onChange={() => toggleCategory(item.value)}
-                                                            className="w-4 h-4 rounded cursor-pointer"
-                                                        />
-                                                        <span className="text-sm">{item.label}</span>
-                                                    </label>
-                                                ))}
+                                                {isCategoriesLoading ? (
+                                                    <div className="p-4 text-center">
+                                                        <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                                                        <p className="text-gray-500 text-xs">Memuat kategori...</p>
+                                                    </div>
+                                                ) : BOOK_CATEGORIES.length > 0 ? (
+                                                    BOOK_CATEGORIES.map((item) => (
+                                                        <label
+                                                            key={item.value}
+                                                            className="flex items-center gap-3 p-2 bg-white text-gray-700 hover:bg-gray-50 rounded cursor-pointer transition-colors"
+                                                        >
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedCategories.includes(item.value)}
+                                                                onChange={() => toggleCategory(item.value)}
+                                                                className="w-4 h-4 rounded cursor-pointer"
+                                                            />
+                                                            <span className="text-sm">{item.label}</span>
+                                                        </label>
+                                                    ))
+                                                ) : (
+                                                    <div className="p-4 text-center text-gray-500 text-xs">
+                                                        Tidak ada kategori tersedia
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 
@@ -380,7 +425,6 @@ export default function NavbarHome() {
                                                     </span>
                                                 </div>
                                             </div>
-
                                             {isSearching ? (
                                                 <div className="p-6 flex flex-col items-center justify-center">
                                                     <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin mb-2"></div>
@@ -418,7 +462,7 @@ export default function NavbarHome() {
                                                                             )}
                                                                         </div>
                                                                         <div className="flex flex-wrap gap-1">
-                                                                            {getCategoryLabel(book.category).map((label, idx) => (
+                                                                            {getCategoryLabel(book.category, BOOK_CATEGORIES).map((label, idx) => (
                                                                                 <span
                                                                                     key={idx}
                                                                                     className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full truncate"
@@ -562,7 +606,7 @@ export default function NavbarHome() {
                                                     </div>
                                                 </div>
                                             </div>
-                                            {/* dropdown profile */}
+
                                             <div className="py-2">
                                                 <Button
                                                     onClick={() => {
@@ -595,7 +639,9 @@ export default function NavbarHome() {
                                                     </div>
                                                 </Button>
                                             </div>
+
                                             <div className="border-t border-gray-100 my-1" />
+
                                             <Button
                                                 onClick={handleLogout}
                                                 className="cursor-pointer w-full justify-start px-4 py-3 text-left hover:bg-red-50 text-sm transition-all duration-200"
@@ -698,6 +744,7 @@ export default function NavbarHome() {
                                 </div>
                             </form>
                         </div>
+
                         <div className="p-4 space-y-4 max-h-[65vh] overflow-y-auto pb-17.5">
                             <div>
                                 <div className="flex items-center justify-between mb-2">
@@ -713,18 +760,29 @@ export default function NavbarHome() {
                                     )}
                                 </div>
                                 <div className="flex flex-wrap gap-2">
-                                    {BOOK_CATEGORIES.map((item) => (
-                                        <Button
-                                            key={item.value}
-                                            onClick={() => toggleCategory(item.value)}
-                                            variant={selectedCategories.includes(item.value) ? "default" : "outline"}
-                                            className="cursor-pointer text-xs px-3 py-1.5 rounded-full"
-                                        >
-                                            {item.label}
-                                        </Button>
-                                    ))}
+                                    {isCategoriesLoading ? (
+                                        <div className="w-full text-center py-2">
+                                            <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin mx-auto"></div>
+                                        </div>
+                                    ) : BOOK_CATEGORIES.length > 0 ? (
+                                        BOOK_CATEGORIES.map((item) => (
+                                            <Button
+                                                key={item.value}
+                                                onClick={() => toggleCategory(item.value)}
+                                                variant={selectedCategories.includes(item.value) ? "default" : "outline"}
+                                                className="cursor-pointer text-xs px-3 py-1.5 rounded-full"
+                                            >
+                                                {item.label}
+                                            </Button>
+                                        ))
+                                    ) : (
+                                        <div className="w-full text-center text-gray-500 text-xs py-2">
+                                            Tidak ada kategori tersedia
+                                        </div>
+                                    )}
                                 </div>
                             </div>
+
                             <div>
                                 <div className="flex items-center justify-between mb-2">
                                     <h3 className="font-semibold text-sm text-gray-800">Hasil Pencarian</h3>
@@ -771,7 +829,7 @@ export default function NavbarHome() {
                                                                 </div>
                                                             </div>
                                                             <div className="flex flex-wrap gap-1">
-                                                                {getCategoryLabel(book.category).map((label, idx) => (
+                                                                {getCategoryLabel(book.category, BOOK_CATEGORIES).map((label, idx) => (
                                                                     <span
                                                                         key={idx}
                                                                         className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full truncate"
@@ -801,11 +859,13 @@ export default function NavbarHome() {
                                 )}
                             </div>
                         </div>
+
                         <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4">
                             <Button
                                 onClick={handleSearchSubmit}
                                 disabled={!searchQuery.trim() && selectedCategories.length === 0}
-                                className={`cursor-pointer w-full py-2 text-sm ${!searchQuery.trim() && selectedCategories.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                className={`cursor-pointer w-full py-2 text-sm ${!searchQuery.trim() && selectedCategories.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
+                                    }`}
                             >
                                 Cari
                             </Button>
@@ -892,6 +952,7 @@ export default function NavbarHome() {
                                 >
                                     <span className="text-sm">Riwayat Pembelian</span>
                                 </Button>
+
                                 <div className="p-3 mb-3">
                                     <div className="flex items-center justify-between mb-2">
                                         <h3 className="font-semibold text-sm text-black">Notifikasi</h3>
@@ -910,7 +971,6 @@ export default function NavbarHome() {
                                             {unreadCount} notifikasi belum dibaca
                                         </div>
                                     )}
-
                                     <div className="flex gap-2 mt-3">
                                         <Button
                                             onClick={handleLogout}

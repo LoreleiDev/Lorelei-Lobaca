@@ -1,31 +1,24 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import Loading from "@/components/ui/Loading";
-import AnimatedWaves from "./ui/AnimatedWaves";
 import { CartProvider } from '../hooks/UseCart';
+import { Calendar, Tag, ChevronLeft } from "lucide-react";
 
-const BOOK_CATEGORIES = [
-    { value: "fiksi", label: "Fiksi" },
-    { value: "non_fiksi", label: "Non-Fiksi" },
-    { value: "seni_kreatif", label: "Seni & Kreatif" },
-    { value: "gaya_hidup", label: "Gaya Hidup" },
-    { value: "pendidikan", label: "Pendidikan" },
-    { value: "buku_anak", label: "Buku Anak" },
-    { value: "komik", label: "Komik" },
-    { value: "novel", label: "Novel" },
-    { value: "majalah", label: "Majalah" },
-];
-
-const getCategoryLabels = (categoryString) => {
-    if (!categoryString) return [];
-    return categoryString
-        .split(',')
-        .map(cat => cat.trim())
-        .filter(Boolean)
-        .map(cat => {
-            const found = BOOK_CATEGORIES.find(c => c.value === cat);
-            return found ? found.label : cat;
-        });
+const getCategoryLabels = (categoryString, categories) => {
+    if (!categoryString || !categories?.length) return [];
+    
+    const cats = Array.isArray(categoryString) 
+        ? categoryString 
+        : categoryString.split(',').map(cat => cat.trim()).filter(Boolean);
+    
+    return cats.map(cat => {
+        const found = categories.find(c => 
+            String(c.value) === String(cat) || 
+            String(c.slug) === String(cat) || 
+            String(c.id) === String(cat)
+        );
+        return found ? found.label : cat;
+    });
 };
 
 const getDiscountPercent = (originalPrice, discountPrice) => {
@@ -64,19 +57,43 @@ export default function PromoDetailPage() {
     const { id } = useParams();
     const [promo, setPromo] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [scrolled, setScrolled] = useState(false);
+    
+    const [BOOK_CATEGORIES, setBookCategories] = useState([]);
+    const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
 
     useEffect(() => {
-        const handleScroll = () => {
-            const header = document.getElementById("promo-header");
-            if (header) {
-                const rect = header.getBoundingClientRect();
-                setScrolled(rect.bottom < 0);
+        const fetchCategories = async () => {
+            try {
+                const res = await fetch('/api/public/categories', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (!res.ok) throw new Error('Gagal mengambil kategori');
+
+                const data = await res.json();
+                
+                const formatted = Array.isArray(data) ? data.map(cat => ({
+                    id: cat.id,
+                    name: cat.name,
+                    slug: cat.slug,
+                    value: cat.slug || cat.value,
+                    label: cat.label || cat.name,
+                })) : [];
+
+                setBookCategories(formatted);
+            } catch (err) {
+                console.error('Error fetching categories:', err);
+                setBookCategories([]);
+            } finally {
+                setIsCategoriesLoading(false);
             }
         };
 
-        window.addEventListener("scroll", handleScroll);
-        return () => window.removeEventListener("scroll", handleScroll);
+        fetchCategories();
     }, []);
 
     useEffect(() => {
@@ -106,7 +123,7 @@ export default function PromoDetailPage() {
         fetchPromo();
     }, [id]);
 
-    if (loading) {
+    if (loading || isCategoriesLoading) {
         return (
             <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
                 <Loading />
@@ -116,43 +133,20 @@ export default function PromoDetailPage() {
 
     if (!promo) {
         return (
-            <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
-                <div style={{
-                    padding: '4rem 1rem',
-                    textAlign: 'center'
-                }}>
-                    <h2 style={{
-                        fontSize: '2rem',
-                        fontWeight: 'bold',
-                        color: '#1f2937',
-                        textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
-                        marginBottom: '1rem'
-                    }}>
-                        Promo Tidak Ditemukan
-                    </h2>
-                    <Link
-                        to="/promo"
-                        style={{
-                            display: 'inline-block',
-                            padding: '0.75rem 1.5rem',
-                            backgroundColor: '#d97706',
-                            color: 'white',
-                            borderRadius: '0.5rem',
-                            textDecoration: 'none',
-                            fontWeight: 'bold',
-                            fontSize: '1rem',
-                            boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
-                            transition: 'transform 0.2s ease'
-                        }}
-                        onMouseOver={(e) => {
-                            e.target.style.transform = 'scale(1.05)';
-                            e.target.style.backgroundColor = '#b45309';
-                        }}
-                        onMouseOut={(e) => {
-                            e.target.style.transform = 'scale(1)';
-                            e.target.style.backgroundColor = '#d97706';
-                        }}
-                    >
+            <div className="min-h-screen bg-gray-50">
+                <div className="pt-16 pb-4 px-4 bg-linear-to-r from-blue-600 to-yellow-500">
+                    <div className="max-w-6xl mx-auto">
+                        <Link to="/promo" className="inline-block">
+                            <div className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5 text-white text-sm border border-white/30 hover:bg-white/30 hover:-translate-x-1 transition-all duration-300">
+                                <ChevronLeft className="w-4 h-4" />
+                                <span>Kembali</span>
+                            </div>
+                        </Link>
+                    </div>
+                </div>
+                <div className="py-16 text-center">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4">Promo Tidak Ditemukan</h2>
+                    <Link to="/promo" className="inline-block px-6 py-3 bg-yellow-500 text-white rounded-lg font-medium hover:bg-yellow-600 transition">
                         Kembali ke Promo
                     </Link>
                 </div>
@@ -164,90 +158,85 @@ export default function PromoDetailPage() {
 
     return (
         <CartProvider>
-            <div style={{
-                minHeight: '100vh',
-                backgroundColor: '#f9fafb',
-                position: 'relative',
-                overflowX: 'hidden'
-            }}>
-                <Link
-                    to="/promo"
-                    style={{
-                        fontSize: '0.875rem',
-                        fontWeight: 'bold',
-                        color: '#1f2937',
-                        textDecoration: 'none'
-                    }}
-                >
-                    <div style={{
-                        position: 'relative',
-                        zIndex: 40,
-                        padding: '1rem 0 0 1rem',
-                        cursor: 'pointer'
-                    }}>
-                        <div style={{
-                            display: 'inline-block',
-                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                            borderRadius: '0.5rem',
-                            padding: '0.5rem 1rem',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                            border: '1px solid #e5e7eb',
-                            transition: 'transform 0.3s ease'
-                        }}>
-                            <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem'
-                            }}>
-                                <svg xmlns="http://www.w3.org/2000/svg" style={{ height: '1rem', width: '1rem', fill: '#eab308' }} viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-                                </svg>
-
-                                Kembali ke Promo
-
+            <div className="min-h-screen bg-gray-50">
+                <div className="pt-16 pb-4 px-4 bg-linear-to-r from-blue-600 to-yellow-500">
+                    <div className="max-w-6xl mx-auto">
+                        <Link
+                            to="/promo"
+                            className="inline-block mb-3"
+                        >
+                            <div className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5 text-white text-sm border border-white/30 hover:bg-white/30 hover:-translate-x-1 transition-all duration-300">
+                                <ChevronLeft className="w-4 h-4" />
+                                <span>Kembali</span>
                             </div>
+                        </Link>
+
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
+                                <Tag className="w-3 h-3 text-white" />
+                            </div>
+                            <h1 
+                                id="promo-header"
+                                className="text-xl md:text-2xl text-white tracking-tight" 
+                                style={{ fontFamily: "Rubik Mono One" }}
+                            >
+                                {promo.name}
+                            </h1>
                         </div>
+
+                        {promo.description && (
+                            <p className="text-blue-100 text-xs max-w-2xl mb-2">
+                                {promo.description}
+                            </p>
+                        )}
+
+                        {promo.endDate && (
+                            <div className="flex items-center gap-1.5 text-blue-100 text-xs">
+                                <Calendar className="w-3.5 h-3.5" />
+                                <span>
+                                    Berlaku hingga: {new Date(promo.endDate).toLocaleDateString("id-ID", {
+                                        day: 'numeric',
+                                        month: 'long',
+                                        year: 'numeric'
+                                    })}
+                                </span>
+                            </div>
+                        )}
+
+                        {!promo.endDate && (
+                            <div className="flex items-center gap-1.5 text-blue-100 text-xs">
+                                <Calendar className="w-3.5 h-3.5" />
+                                <span>Berlaku selamanya</span>
+                            </div>
+                        )}
                     </div>
-                </Link>
-                <div style={{
-                    padding: '1rem',
-                    textAlign: 'center',
-                    zIndex: 10,
-                    position: 'relative'
-                }}>
-                    <h1
-                        id="promo-header"
-                        style={{
-                            fontSize: '2.5rem',
-                            fontWeight: 'bold',
-                            color: '#1f2937',
-                            textShadow: '2px 2px 4px rgba(0,0,0,0.3), -1px -1px 0 #ffffff, 1px 1px 0 #ffffff',
-                            letterSpacing: '2px',
-                            fontFamily: 'Rubik Mono One, sans-serif',
-                            maxWidth: '80%',
-                            margin: '0 auto'
-                        }}
-                    >
-                        {promo.name}
-                    </h1>
                 </div>
 
-                <div style={{
-                    padding: '1rem',
-                    paddingBottom: '3rem',
-                    position: 'relative',
-                    zIndex: 10
-                }}>
-                    <AnimatedWaves />
-                    <div style={{
-                        maxWidth: '1200px',
-                        margin: '0 auto'
-                    }}>
+                <div className="py-6 px-4 max-w-6xl mx-auto">
+                    {visibleBooks.length === 0 ? (
+                        <div className="text-center py-12">
+                            <div className="text-5xl mb-4">📚</div>
+                            <h2 className="text-xl font-bold text-gray-800 mb-3">Tidak Ada Buku dalam Promo</h2>
+                            <p className="text-gray-600 mb-6">Promo ini sedang dalam persiapan atau belum memiliki buku spesifik.</p>
+                            <Link
+                                to="/buku"
+                                className="inline-block px-6 py-3 bg-linear-to-r from-blue-600 to-blue-700 text-white rounded-full font-medium hover:from-blue-700 hover:to-blue-800 transition"
+                            >
+                                Jelajahi Buku Lainnya
+                            </Link>
+                        </div>
+                    ) : (
                         <>
+                            <div className="mb-4">
+                                <h2 className="text-lg font-semibold text-gray-800">
+                                    Buku dalam Promo ({visibleBooks.length})
+                                </h2>
+                            </div>
+                            
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                                 {visibleBooks.map((book) => {
-                                    const categoryLabels = getCategoryLabels(book.category);
                                     const discountPercent = getDiscountPercent(book.originalPrice, book.discountPrice);
+                                    const categoryLabels = getCategoryLabels(book.category, BOOK_CATEGORIES);
 
                                     return (
                                         <div
@@ -290,6 +279,7 @@ export default function PromoDetailPage() {
                                                     </h3>
                                                     <p className="text-xs text-gray-600 mb-2">by {book.author}</p>
                                                 </div>
+                                                
                                                 {categoryLabels.length > 0 && (
                                                     <div className="mb-3">
                                                         <div className="flex flex-wrap gap-1">
@@ -304,6 +294,7 @@ export default function PromoDetailPage() {
                                                         </div>
                                                     </div>
                                                 )}
+                                                
                                                 <div className="flex items-center justify-between mt-auto">
                                                     <div className="flex flex-col">
                                                         {book.originalPrice !== book.discountPrice ? (
@@ -329,7 +320,7 @@ export default function PromoDetailPage() {
                                                         </div>
                                                     ) : (
                                                         <div className="text-xs text-gray-500 italic">
-                                                            Belum di Review
+                                                            Baru
                                                         </div>
                                                     )}
                                                 </div>
@@ -339,7 +330,7 @@ export default function PromoDetailPage() {
                                 })}
                             </div>
                         </>
-                    </div>
+                    )}
                 </div>
             </div>
         </CartProvider>

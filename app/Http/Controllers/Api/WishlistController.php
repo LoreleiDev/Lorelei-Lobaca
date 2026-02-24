@@ -14,7 +14,10 @@ class WishlistController extends Controller
 {
     public function index()
     {
-        $wishlists = Auth::user()->wishlist()->with('buku.admin', 'buku.reviews')->get();
+        $wishlists = Auth::user()->wishlist()
+            ->with('buku.categories', 'buku.admin', 'buku.reviews')
+            ->get();
+        
         $now = Carbon::now('Asia/Jakarta');
 
         $books = $wishlists->map(function ($item) use ($now) {
@@ -68,7 +71,9 @@ class WishlistController extends Controller
                 'slug' => str($book->judul)->slug()->toString(),
                 'has_promo' => $hasPromo,
                 'promo_name' => $promoName,
-                'category' => $book->kategori,
+                
+                // ✅ PENTING: Return kategori dari relasi (slug untuk matching di frontend)
+                'category' => $book->categories->pluck('slug')->filter()->join(','),
             ];
         });
 
