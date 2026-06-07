@@ -22,15 +22,6 @@ use App\Http\Controllers\Api\Admin\CategoryController;
 use App\Http\Controllers\Api\Admin\DashboardController;
 use App\Http\Controllers\Api\TransactionStatusController;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| These routes are stateless and do NOT use CSRF protection.
-|
-*/
-
 // --- Routes Public ---
 Route::post('/register', [AuthController::class, 'apiRegister']);
 Route::post('/login', [AuthController::class, 'apiLogin']);

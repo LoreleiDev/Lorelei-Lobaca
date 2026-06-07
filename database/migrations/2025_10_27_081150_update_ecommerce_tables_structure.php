@@ -52,6 +52,7 @@ return new class extends Migration {
             $table->string('resi_pengiriman')->nullable();
             $table->timestamp('tanggal_dikirim')->nullable();
             $table->timestamp('tanggal_diterima')->nullable();
+            $table->text('qr_code_url')->nullable();
             $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');

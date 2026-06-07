@@ -14,8 +14,9 @@ class PromoController extends Controller
     protected function cleanupExpiredPromos()
     {
         $now = Carbon::now('Asia/Jakarta');
+        
         $expiredPromos = Promo::whereNotNull('end_date')
-            ->whereRaw("CONCAT(end_date, ' ', COALESCE(end_time, '23:59:59')) < ?", [
+            ->whereRaw("(end_date || ' ' || COALESCE(end_time, '23:59:59')) < ?", [
                 $now->format('Y-m-d H:i:s')
             ])
             ->get();
@@ -35,8 +36,8 @@ class PromoController extends Controller
         $now = Carbon::now('Asia/Jakarta');
 
         $promos = Promo::with('books')
-            ->whereRaw("CONCAT(start_date, ' ', COALESCE(start_time, '00:00:00')) <= ?", [$now->format('Y-m-d H:i:s')])
-            ->whereRaw("CONCAT(end_date, ' ', COALESCE(end_time, '23:59:59')) >= ?", [$now->format('Y-m-d H:i:s')])
+            ->whereRaw("(start_date || ' ' || COALESCE(start_time, '00:00:00')) <= ?", [$now->format('Y-m-d H:i:s')])
+            ->whereRaw("(end_date || ' ' || COALESCE(end_time, '23:59:59')) >= ?", [$now->format('Y-m-d H:i:s')])
             ->get()
             ->map(function ($promo) {
                 return [
@@ -88,11 +89,12 @@ class PromoController extends Controller
 
         if (!empty($validated['books'])) {
             $bookIds = collect($validated['books'])->pluck('id')->unique()->values()->all();
+            
             $existingPromo = Promo::whereHas('books', function ($q) use ($bookIds) {
                 $q->whereIn('promo_buku.buku_id', $bookIds);
-            })->whereRaw("CONCAT(end_date, ' ', COALESCE(end_time, '23:59:59')) >= ?", [
-                        $now->format('Y-m-d H:i:s')
-                    ])->exists();
+            })->whereRaw("(end_date || ' ' || COALESCE(end_time, '23:59:59')) >= ?", [
+                $now->format('Y-m-d H:i:s')
+            ])->exists();
 
             if ($existingPromo) {
                 return response()->json([
@@ -150,11 +152,12 @@ class PromoController extends Controller
 
             if (!empty($validated['books'])) {
                 $bookIds = collect($validated['books'])->pluck('id')->unique()->values()->all();
+                
                 $existingPromo = Promo::where('id', '!=', $id)
                     ->whereHas('books', function ($q) use ($bookIds) {
                         $q->whereIn('promo_buku.buku_id', $bookIds);
                     })
-                    ->whereRaw("CONCAT(end_date, ' ', COALESCE(end_time, '23:59:59')) >= ?", [
+                    ->whereRaw("(end_date || ' ' || COALESCE(end_time, '23:59:59')) >= ?", [
                         $now->format('Y-m-d H:i:s')
                     ])
                     ->exists();

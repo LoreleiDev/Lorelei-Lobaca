@@ -29,7 +29,7 @@ return new class extends Migration
             $table->string('kategori')->nullable();
             $table->year('tahun'); 
             $table->timestamps(); 
-            $table->foreign('admin_id')->references('admin_id')->on('admins')->onDelete('cascade');
+            $table->foreign('admin_id')->references('admin_id')->on('admin')->onDelete('cascade');
         });
     }
 

@@ -41,7 +41,7 @@ export default function Dashboard() {
     const [statusData, setStatusData] = useState([]);
     const [recentOrders, setRecentOrders] = useState([]);
     const [chartLoading, setChartLoading] = useState(true);
-    const [ordersToday, setOrdersToday] = useState(0); // State untuk pesanan hari ini
+    const [ordersToday, setOrdersToday] = useState(0); 
     const [ordersTodayLoading, setOrdersTodayLoading] = useState(true);
 
     useEffect(() => {

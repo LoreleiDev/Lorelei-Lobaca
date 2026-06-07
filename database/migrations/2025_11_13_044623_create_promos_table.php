@@ -13,10 +13,10 @@ return new class extends Migration {
         Schema::create('promos', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('start_time', 8)->nullable();
-            $table->string('end_time', 8)->nullable();
-            $table->time('start_time');
-            $table->time('end_time');
+            $table->date('start_date');           
+            $table->date('end_date');             
+            $table->time('start_time')->nullable(); 
+            $table->time('end_time')->nullable();   
             $table->string('image_url')->nullable();
             $table->timestamps();
         });
